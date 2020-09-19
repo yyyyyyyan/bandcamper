@@ -60,7 +60,7 @@ class Bandcamper:
     def _get_url(self, name):
         valid_url = ""
         if self.BANDCAMP_SUBDOMAIN_REGEX.fullmatch(name):
-            valid_url = f"https://{name.lower()}.bandcamp.com"
+            valid_url = f"https://{name.lower()}.bandcamp.com/music"
         else:
             parsed_url = urlparse(name)
             if not parsed_url.scheme:
@@ -68,7 +68,7 @@ class Bandcamper:
             elif self.params.get("force_https"):
                 parsed_url = parsed_url._replace(scheme="https")
             url = parsed_url.geturl()
-            if self.BANDCAMP_URL_REGEX.match(
+            if self.BANDCAMP_URL_REGEX.fullmatch(
                 parsed_url.netloc
             ) or self._is_valid_custom_domain(url):
                 valid_url = url
