@@ -37,7 +37,6 @@ class Bandcamper:
         self.params = {
             "force_https": True,
             "proxies": {"http": getenv("HTTP_PROXY"), "https": getenv("HTTPS_PROXY")},
-            "ignore_errors": False,
         }
         self.screamer = screamer
         self.params.update(kwargs)
@@ -66,7 +65,7 @@ class Bandcamper:
             response = requests.get(source_url, proxies=self.params.get("proxies"))
             response.raise_for_status()
         except RequestException as err:
-            self.screamer.error(str(err))
+            self.screamer.error(str(err), True)
         else:
             base_url = "https://" + urlparse(source_url).netloc.strip("/ ")
             soup = BeautifulSoup(response.content, "lxml")
