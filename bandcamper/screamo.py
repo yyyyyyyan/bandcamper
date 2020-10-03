@@ -10,6 +10,8 @@ WarnType = namedtuple("WarnType", ["verbose_level", "symbol", "color"])
 class Screamer:
     ERROR = WarnType(3, ("Error:", "[-]"), Fore.RED)
     WARNING = WarnType(2, ("Warning:", "[!]"), Fore.YELLOW)
+    SUCCESS = WarnType(1, ("Success:", "[+]"), Fore.GREEN)
+    INFO = WarnType(0, ("Info:", "[~]"), Fore.CYAN)
 
     def __init__(self, quiet_level, colored, ignore_errors, color_autoreset=True):
         init(autoreset=color_autoreset)
@@ -26,7 +28,7 @@ class Screamer:
         self._quiet_level = int(level)
 
     def scream(self, text, importance_level=float("inf")):
-        if importance_level > self.quiet_level:
+        if not self.quiet_level or importance_level > self.quiet_level:
             print(text)
 
     def _scream_warn(self, msg, warn_type, short_symbol):
@@ -46,3 +48,9 @@ class Screamer:
 
     def warning(self, msg, short_symbol=False):
         self._scream_warn(msg, self.WARNING, short_symbol)
+
+    def success(self, msg, short_symbol=False):
+        self._scream_warn(msg, self.SUCCESS, short_symbol)
+
+    def info(self, msg, short_symbol=False):
+        self._scream_warn(msg, self.INFO, short_symbol)
