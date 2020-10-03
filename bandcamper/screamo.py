@@ -39,7 +39,7 @@ class Screamer:
             text = symbol + msg
         self.scream(text, warn_type.verbose_level)
 
-    def error(self, msg, force_error=False, short_symbol=False):
+    def error(self, msg, short_symbol=False, force_error=False):
         if self.ignore_errors and not force_error:
             self.warning(msg, short_symbol)
         else:
