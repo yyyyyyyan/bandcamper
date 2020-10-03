@@ -1,8 +1,9 @@
 import re
 from os import getenv
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
+from bs4 import BeautifulSoup
 from requests.exceptions import RequestException
 
 
@@ -42,25 +43,48 @@ class Bandcamper:
         self.params.update(kwargs)
         self.urls = set()
         for url in urls:
-            url = self._get_url(url)
-            if url:
-                self.urls.add(url)
+            self.add_url(url)
 
     def _is_valid_custom_domain(self, url):
         valid = False
         try:
-            res = requests.get(url, stream=True, proxies=self.params.get("proxies"))
+            response = requests.get(
+                url, stream=True, proxies=self.params.get("proxies")
+            )
         except RequestException:
             self.screamer.error(f"Unable to connect to {url}!")
         else:
-            valid = res.raw._connection.sock.getpeername()[0] == self.CUSTOM_DOMAIN_IP
+            valid = (
+                response.raw._connection.sock.getpeername()[0] == self.CUSTOM_DOMAIN_IP
+            )
         finally:
             return valid
 
-    def _get_url(self, name):
-        valid_url = ""
+    def _add_urls_from_artist(self, source_url):
+        self.screamer.info(f"Scraping URLs from {source_url}...", True)
+        try:
+            response = requests.get(source_url, proxies=self.params.get("proxies"))
+            response.raise_for_status()
+        except RequestException as err:
+            self.screamer.error(str(err))
+        else:
+            base_url = "https://" + urlparse(source_url).netloc.strip("/ ")
+            soup = BeautifulSoup(response.content, "lxml")
+            for a in soup.find("ol", id="music-grid").find_all("a"):
+                parsed_url = urlparse(a.get("href"))
+                if parsed_url.scheme:
+                    url = urljoin(
+                        f"{parsed_url.scheme}://" + parsed_url.netloc.strip("/ "),
+                        parsed_url.path.strip("/ "),
+                    )
+                else:
+                    url = urljoin(base_url, parsed_url.path.strip("/ "))
+                self.urls.add(url)
+
+    def add_url(self, name):
         if self.BANDCAMP_SUBDOMAIN_REGEX.fullmatch(name):
-            valid_url = f"https://{name.lower()}.bandcamp.com/music"
+            url = f"https://{name.lower()}.bandcamp.com/music"
+            self._add_urls_from_artist(url)
         else:
             parsed_url = urlparse(name)
             if not parsed_url.scheme:
@@ -71,7 +95,10 @@ class Bandcamper:
             if self.BANDCAMP_URL_REGEX.fullmatch(
                 parsed_url.netloc
             ) or self._is_valid_custom_domain(url):
-                valid_url = url
+                if parsed_url.path.strip("/ ") in ["music", ""]:
+                    url = f"{parsed_url.scheme}://{parsed_url.netloc}/music"
+                    self._add_urls_from_artist(url)
+                else:
+                    self.urls.add(url)
             else:
                 self.screamer.error(f"{name} is not a valid Bandcamp URL or subdomain")
-        return valid_url
