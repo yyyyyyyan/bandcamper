@@ -57,4 +57,5 @@ if __name__ == "__main__":
             force_error=True,
         )
 
-    print(bandcamper.urls)
+    screamer.info(f"Downloading from {len(bandcamper.urls)} URLs...", True)
+    bandcamper.download_all()

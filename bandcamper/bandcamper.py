@@ -1,3 +1,4 @@
+import json
 import re
 from os import getenv
 from urllib.parse import urljoin, urlparse
@@ -40,33 +41,33 @@ class Bandcamper:
         }
         self.screamer = screamer
         self.params.update(kwargs)
+        self.proxies = self.params.pop("proxies")
         self.urls = set()
         for url in urls:
             self.add_url(url)
 
-    def _is_valid_custom_domain(self, url):
-        valid = False
+    def _get_request_or_error(self, url, **kwargs):
         try:
-            response = requests.get(
-                url, stream=True, proxies=self.params.get("proxies")
-            )
-        except RequestException:
-            self.screamer.error(f"Unable to connect to {url}!")
-        else:
-            valid = (
-                response.raw._connection.sock.getpeername()[0] == self.CUSTOM_DOMAIN_IP
-            )
-        finally:
-            return valid
-
-    def _add_urls_from_artist(self, source_url):
-        self.screamer.info(f"Scraping URLs from {source_url}...", True)
-        try:
-            response = requests.get(source_url, proxies=self.params.get("proxies"))
+            response = requests.get(url, proxies=self.proxies, **kwargs)
             response.raise_for_status()
         except RequestException as err:
             self.screamer.error(str(err), True)
-        else:
+            return None
+        return response
+
+    def _is_valid_custom_domain(self, url):
+        valid = False
+        response = self._get_request_or_error(url, stream=True)
+        if response is not None:
+            valid = (
+                response.raw._connection.sock.getpeername()[0] == self.CUSTOM_DOMAIN_IP
+            )
+        return valid
+
+    def _add_urls_from_artist(self, source_url):
+        self.screamer.info(f"Scraping URLs from {source_url}...", True)
+        response = self._get_request_or_error(source_url)
+        if response is not None:
             base_url = "https://" + urlparse(source_url).netloc.strip("/ ")
             soup = BeautifulSoup(response.content, "lxml")
             for a in soup.find("ol", id="music-grid").find_all("a"):
@@ -101,3 +102,17 @@ class Bandcamper:
                     self.urls.add(url)
             else:
                 self.screamer.error(f"{name} is not a valid Bandcamp URL or subdomain")
+
+    def _get_music_data(self, url):
+        response = self._get_request_or_error(url)
+        soup = BeautifulSoup(response.content, "lxml")
+        data = json.loads(soup.find("script", {"data-tralbum": True})["data-tralbum"])
+        data["art_url"] = soup.select_one("div#tralbumArt > a.popupImage")["href"]
+        return data
+
+    def download_from_url(self, url):
+        music_data = self._get_music_data(url)
+
+    def download_all(self):
+        for url in self.urls:
+            self.download_from_url(url)
