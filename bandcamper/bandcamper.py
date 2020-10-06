@@ -38,6 +38,7 @@ class Bandcamper:
         self.params = {
             "force_https": True,
             "proxies": {"http": getenv("HTTP_PROXY"), "https": getenv("HTTPS_PROXY")},
+            "download_formats": ["mp3-320", "flac"],
         }
         self.screamer = screamer
         self.params.update(kwargs)
@@ -110,8 +111,32 @@ class Bandcamper:
         data["art_url"] = soup.select_one("div#tralbumArt > a.popupImage")["href"]
         return data
 
+    def _download_to_file(self, url):
+        pass
+
+    def _free_download(self, url):
+        response = self._get_request_or_error(url)
+        soup = BeautifulSoup(response.content, "lxml")
+        download_data = json.loads(soup.find("div", id="pagedata")["data-blob"])
+        downloadable = download_data["download_items"][0]["downloads"]
+        for fmt in self.params["download_formats"]:
+            if fmt in downloadable:
+                self.screamer.info("Downloading {fmt}...", True)
+                parsed_url = urlparse(downloadable[fmt]["url"])
+                fwd_url = parsed_url._replace(path="/statdownload/album").geturl()
+                fwd_data = self._get_request_or_error(fwd_url, params={".vrs": 1}, headers={"Accept": "application/json"}).json()
+                if fwd_data["result"] == "ok":
+                    self._download_to_file(fwd_data["download_url"])
+                elif fwd_data["result"] == "err":
+                    self._download_to_file(fwd_data["retry_url"])
+            else:
+                self.screamer.error(f"{fmt} download not found", True)
+
     def download_from_url(self, url):
         music_data = self._get_music_data(url)
+        if music_data.get("freeDownloadPage"):
+            self.screamer.info("Free download link available", True)
+            self._free_download(music_data["freeDownloadPage"])
 
     def download_all(self):
         for url in self.urls:
