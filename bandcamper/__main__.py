@@ -21,6 +21,12 @@ if __name__ == "__main__":
         help="Download from URLs/artists subdomains listed on file. This option can be used multiple times.",
     )
     parser.add_argument(
+        "-o",
+        "--output",
+        default="{artist_name}/{album_title}/{track_title}.{ext}",
+        help="Output filename template"
+    )
+    parser.add_argument(
         "-i",
         "--ignore-errors",
         action="store_true",

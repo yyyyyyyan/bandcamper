@@ -1,12 +1,15 @@
 import json
 import re
 from os import getenv
+from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import RequestException
+from tqdm import tqdm
 
+from bandcamper.requests_utils import get_random_user_agent
 
 class Bandcamper:
     """Represents .
@@ -38,18 +41,21 @@ class Bandcamper:
         self.params = {
             "force_https": True,
             "proxies": {"http": getenv("HTTP_PROXY"), "https": getenv("HTTPS_PROXY")},
+            "headers": {"User-Agent": get_random_user_agent()},
             "download_formats": ["mp3-320", "flac"],
         }
         self.screamer = screamer
         self.params.update(kwargs)
         self.proxies = self.params.pop("proxies")
+        self.headers = self.params.pop("headers")
         self.urls = set()
         for url in urls:
             self.add_url(url)
 
     def _get_request_or_error(self, url, **kwargs):
+        headers = {**self.headers, **kwargs.pop("headers", dict())}
         try:
-            response = requests.get(url, proxies=self.proxies, **kwargs)
+            response = requests.get(url, proxies=self.proxies, headers=headers, **kwargs)
             response.raise_for_status()
         except RequestException as err:
             self.screamer.error(str(err), True)
@@ -111,8 +117,16 @@ class Bandcamper:
         data["art_url"] = soup.select_one("div#tralbumArt > a.popupImage")["href"]
         return data
 
-    def _download_to_file(self, url):
-        pass
+    def download_to_file(self, url, file_path):
+        file_path = Path(file_path)
+        try:
+            with requests.get(url, stream=True, proxies=self.proxies, headers=self.headers) as response:
+                response.raise_for_status()
+                with file_path.open("wb") as file:
+                    for chunk in tqdm(response.iter_content(chunk_size=1024), desc=file_path.name, total=response.headers.get("Content-Length"), unit="KiB", colour="#39d017"):
+                        file.write(chunk)
+        except RequestException as err:
+            self.screamer.error(str(err), True)
 
     def _free_download(self, url):
         response = self._get_request_or_error(url)
@@ -121,22 +135,27 @@ class Bandcamper:
         downloadable = download_data["download_items"][0]["downloads"]
         for fmt in self.params["download_formats"]:
             if fmt in downloadable:
-                self.screamer.info("Downloading {fmt}...", True)
+                self.screamer.info(f"Downloading {fmt}...", True)
                 parsed_url = urlparse(downloadable[fmt]["url"])
-                fwd_url = parsed_url._replace(path="/statdownload/album").geturl()
+                stat_path = parsed_url.path.replace("/download/", "/statdownload/")
+                fwd_url = parsed_url._replace(path=stat_path).geturl()
                 fwd_data = self._get_request_or_error(fwd_url, params={".vrs": 1}, headers={"Accept": "application/json"}).json()
-                if fwd_data["result"] == "ok":
-                    self._download_to_file(fwd_data["download_url"])
-                elif fwd_data["result"] == "err":
-                    self._download_to_file(fwd_data["retry_url"])
+                if fwd_data["result"].lower() == "ok":
+                    self.download_to_file(fwd_data["download_url"])
+                elif fwd_data["result"].lower() == "err":
+                    self.download_to_file(fwd_data["retry_url"])
             else:
-                self.screamer.error(f"{fmt} download not found", True)
+                self.screamer.warning(f"{fmt} download not found", True)
 
     def download_from_url(self, url):
         music_data = self._get_music_data(url)
         if music_data.get("freeDownloadPage"):
             self.screamer.info("Free download link available", True)
             self._free_download(music_data["freeDownloadPage"])
+            # TODO: se tem freeDownloadPage - +facil
+            # TODO: se nenhum item no trackinfo tem streaming - impossivel
+            # TODO: se nao tem freeDownloadPage e tem current->require_email - Formulario de email imitar req
+            # TODO: else -> baixar mp3 mesmo
 
     def download_all(self):
         for url in self.urls:
