@@ -153,12 +153,9 @@ class Bandcamper:
             else:
                 self.screamer.warning(f"{fmt} download not found", True)
 
-    def download_from_url(self, url):
-        music_data = self._get_music_data(url)
-        if music_data.get("freeDownloadPage"):
-            self.screamer.info("Free download link available", True)
-            self._free_download(music_data["freeDownloadPage"])
-
     def download_all(self):
         for url in self.urls:
-            self.download_from_url(url)
+            music_data = self._get_music_data(url)
+            if music_data.get("freeDownloadPage"):
+                self.screamer.info("Free download link available", True)
+                self._free_download(music_data["freeDownloadPage"])
