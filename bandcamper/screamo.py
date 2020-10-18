@@ -1,5 +1,4 @@
 from collections import namedtuple
-from sys import exit
 
 from colorama import Fore, Style
 from colorama import init
@@ -44,7 +43,7 @@ class Screamer:
             self.warning(msg, short_symbol)
         else:
             self._scream_warn(msg, self.ERROR, short_symbol)
-            exit(1)
+            raise RuntimeError(msg)
 
     def warning(self, msg, short_symbol=False):
         self._scream_warn(msg, self.WARNING, short_symbol)
