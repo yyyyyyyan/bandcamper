@@ -10,6 +10,8 @@ from requests.exceptions import RequestException
 from tqdm import tqdm
 
 from bandcamper.requests_utils import get_random_user_agent
+from bandcamper.screamo import Screamer
+
 
 class Bandcamper:
     """Represents .
@@ -37,16 +39,20 @@ class Bandcamper:
     #   https://get.bandcamp.help/hc/en-us/articles/360007902973-How-do-I-set-up-a-custom-domain-on-Bandcamp-
     CUSTOM_DOMAIN_IP = "35.241.62.186"
 
-    def __init__(self, screamer, *urls, **kwargs):
+    def __init__(self, base_path, *urls, **kwargs):
         self.params = {
+            "quiet": 0,
+            "colored": True,
+            "ignore_errors": False,
             "force_https": True,
             "proxies": {"http": getenv("HTTP_PROXY"), "https": getenv("HTTPS_PROXY")},
             "headers": {"User-Agent": get_random_user_agent()},
             "download_formats": ["mp3-320", "flac"],
         }
-        self.screamer = screamer
+        self.base_path = Path(base_path)
         self.params.update(kwargs)
         self.proxies = self.params.pop("proxies")
+        self.screamer = Screamer(self.params.pop("quiet"), self.params.pop("colored"), self.params.pop("ignore_errors"))
         self.headers = self.params.pop("headers")
         self.urls = set()
         for url in urls:
@@ -118,7 +124,7 @@ class Bandcamper:
         return data
 
     def download_to_file(self, url, file_path):
-        file_path = Path(file_path)
+        file_path = self.base_path / file_path
         try:
             with requests.get(url, stream=True, proxies=self.proxies, headers=self.headers) as response:
                 response.raise_for_status()
@@ -152,10 +158,6 @@ class Bandcamper:
         if music_data.get("freeDownloadPage"):
             self.screamer.info("Free download link available", True)
             self._free_download(music_data["freeDownloadPage"])
-            # TODO: se tem freeDownloadPage - +facil
-            # TODO: se nenhum item no trackinfo tem streaming - impossivel
-            # TODO: se nao tem freeDownloadPage e tem current->require_email - Formulario de email imitar req
-            # TODO: else -> baixar mp3 mesmo
 
     def download_all(self):
         for url in self.urls:
