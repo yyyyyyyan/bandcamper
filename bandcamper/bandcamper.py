@@ -52,7 +52,11 @@ class Bandcamper:
         self.base_path = Path(base_path)
         self.params.update(kwargs)
         self.proxies = self.params.pop("proxies")
-        self.screamer = Screamer(self.params.pop("quiet"), self.params.pop("colored"), self.params.pop("ignore_errors"))
+        self.screamer = Screamer(
+            self.params.pop("quiet"),
+            self.params.pop("colored"),
+            self.params.pop("ignore_errors"),
+        )
         self.headers = self.params.pop("headers")
         self.urls = set()
         urls = [*urls]
@@ -64,7 +68,9 @@ class Bandcamper:
     def _get_request_or_error(self, url, **kwargs):
         headers = {**self.headers, **kwargs.pop("headers", dict())}
         try:
-            response = requests.get(url, proxies=self.proxies, headers=headers, **kwargs)
+            response = requests.get(
+                url, proxies=self.proxies, headers=headers, **kwargs
+            )
             response.raise_for_status()
         except RequestException as err:
             self.screamer.error(str(err), True)
@@ -88,7 +94,6 @@ class Bandcamper:
         except FileNotFoundError:
             self.screamer.error(f"File '{filename}' not found!")
         return urls
-
 
     def _add_urls_from_artist(self, source_url):
         self.screamer.info(f"Scraping URLs from {source_url}...", True)
@@ -139,10 +144,18 @@ class Bandcamper:
     def download_to_file(self, url, file_path):
         file_path = self.base_path / file_path
         try:
-            with requests.get(url, stream=True, proxies=self.proxies, headers=self.headers) as response:
+            with requests.get(
+                url, stream=True, proxies=self.proxies, headers=self.headers
+            ) as response:
                 response.raise_for_status()
                 with file_path.open("wb") as file:
-                    for chunk in tqdm(response.iter_content(chunk_size=1024), desc=file_path.name, total=response.headers.get("Content-Length"), unit="KiB", colour="#39d017"):
+                    for chunk in tqdm(
+                        response.iter_content(chunk_size=1024),
+                        desc=file_path.name,
+                        total=response.headers.get("Content-Length"),
+                        unit="KiB",
+                        colour="#39d017",
+                    ):
                         file.write(chunk)
         except RequestException as err:
             self.screamer.error(str(err), True)
@@ -158,7 +171,9 @@ class Bandcamper:
                 parsed_url = urlparse(downloadable[fmt]["url"])
                 stat_path = parsed_url.path.replace("/download/", "/statdownload/")
                 fwd_url = parsed_url._replace(path=stat_path).geturl()
-                fwd_data = self._get_request_or_error(fwd_url, params={".vrs": 1}, headers={"Accept": "application/json"}).json()
+                fwd_data = self._get_request_or_error(
+                    fwd_url, params={".vrs": 1}, headers={"Accept": "application/json"}
+                ).json()
                 if fwd_data["result"].lower() == "ok":
                     self.download_to_file(fwd_data["download_url"])
                 elif fwd_data["result"].lower() == "err":

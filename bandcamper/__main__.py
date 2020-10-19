@@ -24,13 +24,13 @@ def main():
         "-d",
         "--destination",
         default=".",
-        help="Base destination folder for downloaded files. Defaults to current folder."
+        help="Base destination folder for downloaded files. Defaults to current folder.",
     )
     parser.add_argument(
         "-o",
         "--output",
         default="{artist_name}/{album_title}/{track_title}.{ext}",
-        help="Output filename template. See the 'Output Template' section of the README for all the info."
+        help="Output filename template. See the 'Output Template' section of the README for all the info.",
     )
     parser.add_argument(
         "-i",
@@ -52,7 +52,7 @@ def main():
         dest="quiet",
         action="store_const",
         const=-1,
-        help="Run bandcamper with more verbose output."
+        help="Run bandcamper with more verbose output.",
     )
     parser.add_argument(
         "--no-colors",
