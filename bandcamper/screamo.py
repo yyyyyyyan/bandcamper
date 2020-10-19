@@ -27,7 +27,7 @@ class Screamer:
         self._quiet_level = int(level)
 
     def scream(self, text, importance_level=float("inf")):
-        if not self.quiet_level or importance_level > self.quiet_level:
+        if importance_level > self.quiet_level:
             print(text)
 
     def _scream_warn(self, msg, warn_type, short_symbol):

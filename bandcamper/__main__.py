@@ -1,9 +1,9 @@
 from argparse import ArgumentParser
 
 from bandcamper import Bandcamper
-from bandcamper.screamo import Screamer
 
-if __name__ == "__main__":
+
+def main():
     parser = ArgumentParser(description="Download tracks and albums from Bandcamp")
     parser.add_argument(
         "urls",
@@ -21,10 +21,16 @@ if __name__ == "__main__":
         help="Download from URLs/artists subdomains listed on file. This option can be used multiple times.",
     )
     parser.add_argument(
+        "-d",
+        "--destination",
+        default=".",
+        help="Base destination folder for downloaded files. Defaults to current folder."
+    )
+    parser.add_argument(
         "-o",
         "--output",
         default="{artist_name}/{album_title}/{track_title}.{ext}",
-        help="Output filename template"
+        help="Output filename template. See the 'Output Template' section of the README for all the info."
     )
     parser.add_argument(
         "-i",
@@ -32,12 +38,21 @@ if __name__ == "__main__":
         action="store_true",
         help="Don't end the program in case of any (predictable) error; show warning instead.",
     )
-    parser.add_argument(
+    verbosity_options = parser.add_mutually_exclusive_group()
+    verbosity_options.add_argument(
         "-q",
         "--quiet",
         action="count",
         default=0,
         help="Run bandcamper with less output. Use this flag 3 times to completely disable any output.",
+    )
+    verbosity_options.add_argument(
+        "-v",
+        "--verbose",
+        dest="quiet",
+        action="store_const",
+        const=-1,
+        help="Run bandcamper with more verbose output."
     )
     parser.add_argument(
         "--no-colors",
@@ -46,22 +61,20 @@ if __name__ == "__main__":
         help="Disable colored output.",
     )
 
-    args = parser.parse_args()
-    screamer = Screamer(args.quiet, args.colored, args.ignore_errors)
-    urls = args.urls
-    for filename in args.files:
-        try:
-            with open(filename) as url_list:
-                urls.extend(url_list.read().split())
-        except FileNotFoundError:
-            screamer.error(f"File '{filename}' not found!")
-
-    bandcamper = Bandcamper(screamer, *urls)
+    args = vars(parser.parse_args())
+    urls = args.pop("urls")
+    bandcamper = Bandcamper(args.pop("destination"), *urls, **args)
     if not bandcamper.urls:
-        screamer.error(
+        bandcamper.screamer.error(
             "You must give at least one URL/artist subdomain to download",
             force_error=True,
         )
 
-    screamer.info(f"Downloading from {len(bandcamper.urls)} URLs...", True)
     bandcamper.download_all()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except RuntimeError:
+        exit(1)

@@ -55,6 +55,9 @@ class Bandcamper:
         self.screamer = Screamer(self.params.pop("quiet"), self.params.pop("colored"), self.params.pop("ignore_errors"))
         self.headers = self.params.pop("headers")
         self.urls = set()
+        urls = [*urls]
+        for filename in self.params.pop("files", []):
+            urls.extend(self._get_urls_from_file(filename))
         for url in urls:
             self.add_url(url)
 
@@ -76,6 +79,16 @@ class Bandcamper:
                 response.raw._connection.sock.getpeername()[0] == self.CUSTOM_DOMAIN_IP
             )
         return valid
+
+    def _get_urls_from_file(self, filename):
+        urls = []
+        try:
+            with open(filename) as url_list:
+                urls = url_list.read().split("\n")
+        except FileNotFoundError:
+            self.screamer.error(f"File '{filename}' not found!")
+        return urls
+
 
     def _add_urls_from_artist(self, source_url):
         self.screamer.info(f"Scraping URLs from {source_url}...", True)
@@ -154,6 +167,7 @@ class Bandcamper:
                 self.screamer.warning(f"{fmt} download not found", True)
 
     def download_all(self):
+        self.screamer.info(f"Downloading from {len(self.urls)} URLs...", True)
         for url in self.urls:
             music_data = self._get_music_data(url)
             if music_data.get("freeDownloadPage"):
