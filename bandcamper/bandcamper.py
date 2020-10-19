@@ -66,14 +66,15 @@ class Bandcamper:
             self.add_url(url)
 
     def _get_request_or_error(self, url, **kwargs):
-        headers = {**self.headers, **kwargs.pop("headers", dict())}
+        proxies = kwargs.pop("proxies", self.proxies)
+        headers = kwargs.pop("headers", self.headers)
         try:
             response = requests.get(
-                url, proxies=self.proxies, headers=headers, **kwargs
+                url, proxies=proxies, headers=headers, **kwargs
             )
             response.raise_for_status()
         except RequestException as err:
-            self.screamer.error(str(err), True)
+            self.screamer.error(str(err))
             return None
         return response
 
@@ -96,7 +97,8 @@ class Bandcamper:
         return urls
 
     def _add_urls_from_artist(self, source_url):
-        self.screamer.info(f"Scraping URLs from {source_url}...", True)
+        self.screamer.info(f"Scraping URLs from {source_url}")
+        url_count = 0
         response = self._get_request_or_error(source_url)
         if response is not None:
             base_url = "https://" + urlparse(source_url).netloc.strip("/ ")
@@ -107,10 +109,12 @@ class Bandcamper:
                     url = urljoin(
                         f"{parsed_url.scheme}://" + parsed_url.netloc.strip("/ "),
                         parsed_url.path.strip("/ "),
-                    )
+                        )
                 else:
                     url = urljoin(base_url, parsed_url.path.strip("/ "))
                 self.urls.add(url)
+                url_count += 1
+        self.screamer.info(f"Found {url_count} URLs in {source_url}")
 
     def add_url(self, name):
         if self.BANDCAMP_SUBDOMAIN_REGEX.fullmatch(name):
@@ -136,6 +140,8 @@ class Bandcamper:
 
     def _get_music_data(self, url):
         response = self._get_request_or_error(url)
+        if response is None:
+            return None
         soup = BeautifulSoup(response.content, "lxml")
         data = json.loads(soup.find("script", {"data-tralbum": True})["data-tralbum"])
         data["art_url"] = soup.select_one("div#tralbumArt > a.popupImage")["href"]
@@ -159,6 +165,8 @@ class Bandcamper:
                         file.write(chunk)
         except RequestException as err:
             self.screamer.error(str(err), True)
+        else:
+            self.screamer.success(f"Downloaded {file_path}")
 
     def _free_download(self, url):
         response = self._get_request_or_error(url)
@@ -182,9 +190,14 @@ class Bandcamper:
                 self.screamer.warning(f"{fmt} download not found", True)
 
     def download_all(self):
-        self.screamer.info(f"Downloading from {len(self.urls)} URLs...", True)
+        self.screamer.info(f"Starting download of {len(self.urls)} items...")
         for url in self.urls:
+            self.screamer.info(f"Getting music data from {url}")
             music_data = self._get_music_data(url)
+            if music_data is None:
+                self.screamer.error(f"Failed to get music data from {url}", True)
+                continue
+
             if music_data.get("freeDownloadPage"):
-                self.screamer.info("Free download link available", True)
+                self.screamer.success("Free download link available", True)
                 self._free_download(music_data["freeDownloadPage"])
