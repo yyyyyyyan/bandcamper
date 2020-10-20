@@ -38,6 +38,17 @@ class Bandcamper:
     # Article available on:
     #   https://get.bandcamp.help/hc/en-us/articles/360007902973-How-do-I-set-up-a-custom-domain-on-Bandcamp-
     CUSTOM_DOMAIN_IP = "35.241.62.186"
+    DOWNLOAD_FORMATS = {
+        "aac-hi": ["aac", ".m4a", "audio/mp4"],
+        "aiff-lossless": ["aiff", ".aiff", "audio/x-aiff"],
+        "alac": [".m4a", "audio/alac"],
+        "flac": [".flac", "audio/flac"],
+        "mp3-128": ["mp3", ".mp3", "audio/mpeg"],
+        "mp3-320": [".mp3", "audio/mpeg"],
+        "mp3-v0": [".mp3", "audio/mpeg"],
+        "vorbis": ["ogg", ".ogg", "application/ogg"],
+        "wav": [".wav", "audio/x-wav"]
+    }
 
     def __init__(self, base_path, *urls, **kwargs):
         self.params = {
@@ -47,7 +58,6 @@ class Bandcamper:
             "force_https": True,
             "proxies": {"http": getenv("HTTP_PROXY"), "https": getenv("HTTPS_PROXY")},
             "headers": {"User-Agent": get_random_user_agent()},
-            "download_formats": ["mp3-320", "flac"],
         }
         self.base_path = Path(base_path)
         self.params.update(kwargs)
@@ -168,12 +178,12 @@ class Bandcamper:
         else:
             self.screamer.success(f"Downloaded {file_path}")
 
-    def _free_download(self, url):
+    def _free_download(self, url, download_formats):
         response = self._get_request_or_error(url)
         soup = BeautifulSoup(response.content, "lxml")
         download_data = json.loads(soup.find("div", id="pagedata")["data-blob"])
         downloadable = download_data["download_items"][0]["downloads"]
-        for fmt in self.params["download_formats"]:
+        for fmt in download_formats:
             if fmt in downloadable:
                 self.screamer.info(f"Downloading {fmt}...", True)
                 parsed_url = urlparse(downloadable[fmt]["url"])
@@ -189,7 +199,15 @@ class Bandcamper:
             else:
                 self.screamer.warning(f"{fmt} download not found", True)
 
-    def download_all(self):
+    def download_all(self, download_formats_filters):
+        download_formats_filters = [fmt_filter.lower().replace("_", "-") for fmt_filter in download_formats_filters]
+        download_formats = set()
+        for fmt, fmt_filters in self.DOWNLOAD_FORMATS.items():
+            if any(fmt_filter in download_formats_filters for fmt_filter in [fmt, *fmt_filters]):
+                download_formats.add(fmt)
+        if not download_formats:
+            self.screamer.error("You need to specify at least one audio format to download", force_error=True)
+
         self.screamer.info(f"Starting download of {len(self.urls)} items...")
         for url in self.urls:
             self.screamer.info(f"Getting music data from {url}")
@@ -200,4 +218,4 @@ class Bandcamper:
 
             if music_data.get("freeDownloadPage"):
                 self.screamer.success("Free download link available", True)
-                self._free_download(music_data["freeDownloadPage"])
+                self._free_download(music_data["freeDownloadPage"], download_formats)

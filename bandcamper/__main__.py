@@ -12,13 +12,21 @@ def main():
         help="URLs/artists subdomains to download songs from.",
     )
     parser.add_argument(
-        "-f",
+        "-F",
         "--file",
         dest="files",
         metavar="<file>",
         default=[],
         action="append",
         help="Download from URLs/artists subdomains listed on file. This option can be used multiple times.",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        dest="download_formats",
+        default=["mp3-320", "flac"],
+        action="append",
+        help="Audio formats to download, as format name, alias, extension, or MIME type. See the 'FORMAT SELECTION' section of the docs for all the info."
     )
     parser.add_argument(
         "-d",
@@ -63,6 +71,7 @@ def main():
 
     args = vars(parser.parse_args())
     urls = args.pop("urls")
+    download_formats = args.pop("download_formats")
     bandcamper = Bandcamper(args.pop("destination"), *urls, **args)
     if not bandcamper.urls:
         bandcamper.screamer.error(
@@ -70,7 +79,7 @@ def main():
             force_error=True,
         )
 
-    bandcamper.download_all()
+    bandcamper.download_all(download_formats)
 
 
 if __name__ == "__main__":
