@@ -190,7 +190,7 @@ class Bandcamper:
                 stat_path = parsed_url.path.replace("/download/", "/statdownload/")
                 fwd_url = parsed_url._replace(path=stat_path).geturl()
                 fwd_data = self._get_request_or_error(
-                    fwd_url, params={".vrs": 1}, headers={"Accept": "application/json"}
+                    fwd_url, params={".vrs": 1}, headers={**self.headers, "Accept": "application/json"}
                 ).json()
                 if fwd_data["result"].lower() == "ok":
                     self.download_to_file(fwd_data["download_url"])
