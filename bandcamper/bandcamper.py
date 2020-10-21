@@ -38,17 +38,17 @@ class Bandcamper:
     # Article available on:
     #   https://get.bandcamp.help/hc/en-us/articles/360007902973-How-do-I-set-up-a-custom-domain-on-Bandcamp-
     CUSTOM_DOMAIN_IP = "35.241.62.186"
-    DOWNLOAD_FORMATS = {
-        "aac-hi": ["aac", ".m4a", "audio/mp4"],
-        "aiff-lossless": ["aiff", ".aiff", "audio/x-aiff"],
-        "alac": [".m4a", "audio/alac"],
-        "flac": [".flac", "audio/flac"],
-        "mp3-128": ["mp3", ".mp3", "audio/mpeg"],
-        "mp3-320": [".mp3", "audio/mpeg"],
-        "mp3-v0": [".mp3", "audio/mpeg"],
-        "vorbis": ["ogg", ".ogg", "application/ogg"],
-        "wav": [".wav", "audio/x-wav"]
-    }
+    DOWNLOAD_FORMATS = [
+        "aac-hi",
+        "aiff-lossless",
+        "alac",
+        "flac",
+        "mp3-128",
+        "mp3-320",
+        "mp3-v0",
+        "vorbis",
+        "wav"
+    ]
 
     def __init__(self, base_path, *urls, **kwargs):
         self.params = {
@@ -199,14 +199,8 @@ class Bandcamper:
             else:
                 self.screamer.warning(f"{fmt} download not found", True)
 
-    def download_all(self, download_formats_filters):
-        download_formats_filters = [fmt_filter.lower().replace("_", "-") for fmt_filter in download_formats_filters]
-        download_formats = set()
-        for fmt, fmt_filters in self.DOWNLOAD_FORMATS.items():
-            if any(fmt_filter in download_formats_filters for fmt_filter in [fmt, *fmt_filters]):
-                download_formats.add(fmt)
-        if not download_formats:
-            self.screamer.error("You need to specify at least one audio format to download", force_error=True)
+    def download_all(self, download_formats):
+        download_formats = set(download_formats)
 
         self.screamer.info(f"Starting download of {len(self.urls)} items...")
         for url in self.urls:
