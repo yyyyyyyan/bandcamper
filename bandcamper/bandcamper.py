@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import RequestException
-from tqdm import tqdm
 
 from bandcamper.requests_utils import get_download_file_extension
 from bandcamper.requests_utils import get_random_user_agent
@@ -62,6 +61,7 @@ class Bandcamper:
     ]
 
     def __init__(self, base_path, *urls, **kwargs):
+        # TODO: properly set kwargs
         self.params = {
             "quiet": 0,
             "colored": True,
@@ -176,15 +176,15 @@ class Bandcamper:
                     response.headers.get("Content-Type")
                 )
                 file_path = self.base_path / str(file_path).format(ext=file_ext)
-                with file_path.open("wb") as file:
-                    for chunk in tqdm(
-                        response.iter_content(chunk_size=1024),
-                        desc=file_path.name,
-                        total=response.headers.get("Content-Length"),
-                        unit="KiB",
-                        colour="#39d017",
-                    ):
-                        file.write(chunk)
+                # with file_path.open("wb") as file:
+                #     for chunk in tqdm(
+                #         response.iter_content(chunk_size=1024),
+                #         desc=file_path.name,
+                #         total=response.headers.get("Content-Length"),
+                #         unit="KiB",
+                #         colour="#39d017",
+                #     ):
+                #         file.write(chunk)
         except RequestException as err:
             self.screamer.error(str(err), True)
         else:

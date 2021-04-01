@@ -1,5 +1,6 @@
 beautifulsoup4==4.9.3
+click==7.1.2
+click-option-group==0.5.2
 colorama==0.4.4
 lxml==4.6.3
 requests[socks]==2.25.1
-tqdm==4.50.2
