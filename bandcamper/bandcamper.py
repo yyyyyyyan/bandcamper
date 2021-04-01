@@ -9,8 +9,17 @@ from bs4 import BeautifulSoup
 from requests.exceptions import RequestException
 from tqdm import tqdm
 
-from bandcamper.requests_utils import get_random_user_agent
+from bandcamper.requests_utils import get_download_file_extension, get_random_user_agent
 from bandcamper.screamo import Screamer
+
+
+class BandcampItem:
+    def __init__(self, item_type, **music_data):
+        self.item_type = item_type
+
+    @classmethod
+    def from_url(cls, url):
+        pass
 
 
 class Bandcamper:
@@ -158,12 +167,13 @@ class Bandcamper:
         return data
 
     def download_to_file(self, url, file_path):
-        file_path = self.base_path / file_path
         try:
             with requests.get(
                 url, stream=True, proxies=self.proxies, headers=self.headers
             ) as response:
                 response.raise_for_status()
+                file_ext = get_download_file_extension(response.headers.get("Content-Type"))
+                file_path = self.base_path / str(file_path).format(ext=file_ext)
                 with file_path.open("wb") as file:
                     for chunk in tqdm(
                         response.iter_content(chunk_size=1024),
@@ -177,6 +187,7 @@ class Bandcamper:
             self.screamer.error(str(err), True)
         else:
             self.screamer.success(f"Downloaded {file_path}")
+            return file_path
 
     def _free_download(self, url, download_formats):
         response = self._get_request_or_error(url)
@@ -193,9 +204,14 @@ class Bandcamper:
                     fwd_url, params={".vrs": 1}, headers={**self.headers, "Accept": "application/json"}
                 ).json()
                 if fwd_data["result"].lower() == "ok":
-                    self.download_to_file(fwd_data["download_url"])
+                    download_url = fwd_data["download_url"]
                 elif fwd_data["result"].lower() == "err":
-                    self.download_to_file(fwd_data["retry_url"])
+                    download_url = fwd_data["retry_url"]
+                else:
+                    self.screamer.error(f"Error downloading {fmt} from {fwd_url}")
+                    continue
+
+                self.download_to_file(download
             else:
                 self.screamer.warning(f"{fmt} download not found", True)
 
