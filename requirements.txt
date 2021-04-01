@@ -1,5 +1,5 @@
-colorama==0.4.3
-requests[socks]==2.24.0
-lxml==4.5.2
-beautifulsoup4==4.9.2
+colorama==0.4.4
+requests[socks]==2.25.1
+lxml==4.6.3
+beautifulsoup4==4.9.3
 tqdm==4.50.2
