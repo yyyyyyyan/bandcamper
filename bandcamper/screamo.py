@@ -1,7 +1,8 @@
 from collections import namedtuple
 
-from colorama import Fore, Style
+from colorama import Fore
 from colorama import init
+from colorama import Style
 
 WarnType = namedtuple("WarnType", ["verbose_level", "symbol", "color"])
 

@@ -2,14 +2,16 @@ import json
 import re
 from os import getenv
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import RequestException
 from tqdm import tqdm
 
-from bandcamper.requests_utils import get_download_file_extension, get_random_user_agent
+from bandcamper.requests_utils import get_download_file_extension
+from bandcamper.requests_utils import get_random_user_agent
 from bandcamper.screamo import Screamer
 
 
@@ -56,7 +58,7 @@ class Bandcamper:
         "mp3-320",
         "mp3-v0",
         "vorbis",
-        "wav"
+        "wav",
     ]
 
     def __init__(self, base_path, *urls, **kwargs):
@@ -88,9 +90,7 @@ class Bandcamper:
         proxies = kwargs.pop("proxies", self.proxies)
         headers = kwargs.pop("headers", self.headers)
         try:
-            response = requests.get(
-                url, proxies=proxies, headers=headers, **kwargs
-            )
+            response = requests.get(url, proxies=proxies, headers=headers, **kwargs)
             response.raise_for_status()
         except RequestException as err:
             self.screamer.error(str(err))
@@ -128,7 +128,7 @@ class Bandcamper:
                     url = urljoin(
                         f"{parsed_url.scheme}://" + parsed_url.netloc.strip("/ "),
                         parsed_url.path.strip("/ "),
-                        )
+                    )
                 else:
                     url = urljoin(base_url, parsed_url.path.strip("/ "))
                 self.urls.add(url)
@@ -172,7 +172,9 @@ class Bandcamper:
                 url, stream=True, proxies=self.proxies, headers=self.headers
             ) as response:
                 response.raise_for_status()
-                file_ext = get_download_file_extension(response.headers.get("Content-Type"))
+                file_ext = get_download_file_extension(
+                    response.headers.get("Content-Type")
+                )
                 file_path = self.base_path / str(file_path).format(ext=file_ext)
                 with file_path.open("wb") as file:
                     for chunk in tqdm(
@@ -201,7 +203,9 @@ class Bandcamper:
                 stat_path = parsed_url.path.replace("/download/", "/statdownload/")
                 fwd_url = parsed_url._replace(path=stat_path).geturl()
                 fwd_data = self._get_request_or_error(
-                    fwd_url, params={".vrs": 1}, headers={**self.headers, "Accept": "application/json"}
+                    fwd_url,
+                    params={".vrs": 1},
+                    headers={**self.headers, "Accept": "application/json"},
                 ).json()
                 if fwd_data["result"].lower() == "ok":
                     download_url = fwd_data["download_url"]
@@ -210,8 +214,8 @@ class Bandcamper:
                 else:
                     self.screamer.error(f"Error downloading {fmt} from {fwd_url}")
                     continue
-
-                self.download_to_file(download
+                print(download_url)
+                # self.download_to_file(download
             else:
                 self.screamer.warning(f"{fmt} download not found", True)
 
