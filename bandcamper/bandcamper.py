@@ -1,6 +1,5 @@
 import json
 import re
-from os import getenv
 from pathlib import Path
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -12,7 +11,6 @@ from requests.exceptions import RequestException
 
 from bandcamper.requests_utils import get_download_file_extension
 from bandcamper.requests_utils import get_random_user_agent
-from bandcamper.screamo import Screamer
 
 
 class BandcampItem:
@@ -61,31 +59,27 @@ class Bandcamper:
         "wav",
     ]
 
-    def __init__(self, base_path, *urls, **kwargs):
+    def __init__(
+        self,
+        base_path,
+        urls,
+        files,
+        screamer,
+        http_proxy=None,
+        https_proxy=None,
+        force_https=True,
+    ):
         # TODO: properly set kwargs
-        self.params = {
-            "quiet": 0,
-            "colored": True,
-            "ignore_errors": False,
-            "force_https": True,
-            "proxies": {"http": getenv("HTTP_PROXY"), "https": getenv("HTTPS_PROXY")},
-            "headers": {"User-Agent": get_random_user_agent()},
-        }
         self.base_path = Path(base_path)
-        self.params.update(kwargs)
-        self.proxies = self.params.pop("proxies")
-        self.screamer = Screamer(
-            self.params.pop("quiet"),
-            self.params.pop("colored"),
-            self.params.pop("ignore_errors"),
-        )
-        self.headers = self.params.pop("headers")
-        self.urls = set()
-        urls = [*urls]
-        for filename in self.params.pop("files", []):
+        self.urls = {*urls}
+        for filename in files:
             urls.extend(self._get_urls_from_file(filename))
         for url in urls:
             self.add_url(url)
+        self.screamer = screamer
+        self.proxies = {"http": http_proxy, "https": https_proxy}
+        self.force_https = True
+        self.headers = {"User-Agent": get_random_user_agent()}
 
     def _get_request_or_error(self, url, **kwargs):
         proxies = kwargs.pop("proxies", self.proxies)
@@ -108,10 +102,10 @@ class Bandcamper:
         return valid
 
     def _get_urls_from_file(self, filename):
-        urls = []
+        urls = set()
         try:
             with open(filename) as url_list:
-                urls = url_list.read().split("\n")
+                urls = set(url_list.read().split("\n"))
         except FileNotFoundError:
             self.screamer.error(f"File '{filename}' not found!")
         return urls
@@ -144,7 +138,7 @@ class Bandcamper:
             parsed_url = urlparse(name)
             if not parsed_url.scheme:
                 parsed_url = urlparse("https://" + name)
-            elif self.params.get("force_https"):
+            elif self.force_https:
                 parsed_url = parsed_url._replace(scheme="https")
             url = parsed_url.geturl()
             if self.BANDCAMP_URL_REGEX.fullmatch(

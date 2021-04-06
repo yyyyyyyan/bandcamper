@@ -7,6 +7,7 @@ from click_option_group import optgroup
 
 import bandcamper
 from bandcamper import Bandcamper
+from bandcamper.screamo import Screamer
 
 
 def configure(ctx, param, config_path=None):
@@ -106,26 +107,27 @@ def configure(ctx, param, config_path=None):
     metavar="URL",
     help="Proxy to use for all connections. This option overrides --http-proxy and --https-proxy",
 )
+@optgroup.option(
+    "--force-https/--no-force-https",
+    default=True,
+    show_default=True,
+    help="Rewrite every URL to use HTTPS",
+)
 @optgroup.group("Output Options")
 @optgroup.option(
     "-v",
     "--verbose",
     "verbosity",
-    count=True,
+    flag_value=1,
     help="Run bandcamper with more verbose output",
 )
 @optgroup.option(
     "-q", "--quiet", "verbosity", flag_value=-1, help="Completely disable output"
 )
 @optgroup.option(
-    "--colors/--no-colors", default=True, show_default=True, help="Use colored output"
+    "--colored/--no-colors", default=True, show_default=True, help="Use colored output"
 )
 @click.argument("urls", nargs=-1, metavar="URL [URL...]")
-@click.option(
-    "--ignore-errors",
-    is_flag=True,
-    help="Don't end the program in case of any (predictable) error; show warning instead",
-)
 @click.option(
     "--config",
     type=click.Path(exists=True, dir_okay=False),
@@ -145,17 +147,24 @@ def main(
     http_proxy,
     https_proxy,
     proxy,
+    force_https,
     verbosity,
-    colors,
+    colored,
     urls,
-    ignore_errors,
 ):
-    bandcamp_downloader = Bandcamper(destination, *urls)
+    screamer = Screamer(verbosity, colored)
+    if proxy is not None:
+        http_proxy = https_proxy = proxy
+    bandcamp_downloader = Bandcamper(
+        destination,
+        *urls,
+        screamer=screamer,
+        http_proxy=http_proxy,
+        https_proxy=https_proxy,
+        force_https=force_https,
+    )
     if not bandcamp_downloader.urls:
-        bandcamp_downloader.screamer.error(
-            "You must pass at least one URL/artist subdomain to download",
-            force_error=True,
-        )
+        screamer.critical("You must pass at least one URL/artist subdomain to download")
     bandcamp_downloader.download_all(audio_formats)
 
 
