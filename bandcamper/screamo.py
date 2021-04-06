@@ -33,6 +33,10 @@ class Screamer:
     def error(self, text, short_symbol=True):
         self.scream(text, self.ERROR, short_symbol)
 
+    def critical(self, text):
+        self.error(text, False)
+        raise RuntimeError
+
     def warning(self, text, short_symbol=True):
         self.scream(text, self.WARNING, short_symbol)
 
