@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
+import click
 import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import RequestException
@@ -176,15 +177,15 @@ class Bandcamper:
                     response.headers.get("Content-Type")
                 )
                 file_path = self.base_path / str(file_path).format(ext=file_ext)
-                # with file_path.open("wb") as file:
-                #     for chunk in tqdm(
-                #         response.iter_content(chunk_size=1024),
-                #         desc=file_path.name,
-                #         total=response.headers.get("Content-Length"),
-                #         unit="KiB",
-                #         colour="#39d017",
-                #     ):
-                #         file.write(chunk)
+                # TODO: I need to somehow change this Progress Bar to Screamer
+                with file_path.open("wb") as file:
+                    with click.progressbar(
+                        response.iter_content(chunk_size=1024),
+                        length=response.headers.get("Content-Length"),
+                        label=file_path.name,
+                    ) as bar:
+                        for chunk in bar:
+                            file.write(chunk)
         except RequestException as err:
             self.screamer.error(str(err), True)
         else:
