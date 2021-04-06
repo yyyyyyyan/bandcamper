@@ -1,56 +1,60 @@
 from collections import namedtuple
+from contextlib import contextmanager
+from math import ceil
 
-from colorama import Fore
-from colorama import init
-from colorama import Style
+import click
 
-WarnType = namedtuple("WarnType", ["verbose_level", "symbol", "color"])
+WarnType = namedtuple("WarnType", ["symbol", "attrs"])
 
 
 class Screamer:
-    ERROR = WarnType(3, ("Error:", "[-]"), Fore.RED)
-    WARNING = WarnType(2, ("Warning:", "[!]"), Fore.YELLOW)
-    SUCCESS = WarnType(1, ("Success:", "[+]"), Fore.GREEN)
-    INFO = WarnType(0, ("Info:", "[~]"), Fore.CYAN)
+    ERROR = WarnType(("Error:", "[!]"), {"fg": "red", "bold": True})
+    WARNING = WarnType(("Warning:", "[!]"), {"fg": "bright_yellow"})
+    SUCCESS = WarnType(("Success:", "[+]"), {"fg": "bright_green", "bold": True})
+    PROCESSING = WarnType(("Processing:", "[~]"), {"fg": "bright_cyan", "blink": True})
+    INFO = WarnType(("Info:", "[?]"), {"fg": "bright_blue", "bold": True})
 
-    def __init__(self, quiet_level, colored, ignore_errors, color_autoreset=True):
-        init(autoreset=color_autoreset)
-        self.quiet_level = quiet_level
+    def __init__(self, verbosity=0, colored=True):
         self.colored = colored
-        self.ignore_errors = ignore_errors
 
-    @property
-    def quiet_level(self):
-        return self._quiet_level
+    def get_message(self, text, warn_type, short_symbol, **kwargs):
+        symbol = self.style(warn_type.symbol[short_symbol], **warn_type.attrs) + " "
+        text = self.style(text, **kwargs)
+        return symbol + text
 
-    @quiet_level.setter
-    def quiet_level(self, level):
-        self._quiet_level = int(level)
+    def scream(self, text, warn_type, short_symbol, **kwargs):
+        click.echo(self.get_message(text, warn_type, short_symbol, **kwargs))
 
-    def scream(self, text, importance_level=float("inf")):
-        if importance_level > self.quiet_level:
-            print(text)
+    def style(self, text, **kwargs):
+        if kwargs and self.colored:
+            return click.style(text, **kwargs)
+        return text
 
-    def _scream_warn(self, msg, warn_type, short_symbol):
-        symbol = warn_type.symbol[short_symbol] + " "
-        if self.colored:
-            text = Style.BRIGHT + warn_type.color + symbol + Style.RESET_ALL + msg
-        else:
-            text = symbol + msg
-        self.scream(text, warn_type.verbose_level)
+    def error(self, text, short_symbol=True):
+        self.scream(text, self.ERROR, short_symbol)
 
-    def error(self, msg, short_symbol=False, force_error=False):
-        if self.ignore_errors and not force_error:
-            self.warning(msg, short_symbol)
-        else:
-            self._scream_warn(msg, self.ERROR, short_symbol)
-            raise RuntimeError(msg)
+    def warning(self, text, short_symbol=True):
+        self.scream(text, self.WARNING, short_symbol)
 
-    def warning(self, msg, short_symbol=False):
-        self._scream_warn(msg, self.WARNING, short_symbol)
+    def success(self, text, short_symbol=True):
+        self.scream(text, self.SUCCESS, short_symbol)
 
-    def success(self, msg, short_symbol=False):
-        self._scream_warn(msg, self.SUCCESS, short_symbol)
+    @contextmanager
+    def processing(
+        self, text, success_text, short_symbol=True, success_short_symbol=None
+    ):
+        self.scream(text, self.PROCESSING, short_symbol)
+        yield
+        terminal_width = click.get_terminal_size()[0]
+        success_short_symbol = (
+            short_symbol if success_short_symbol is None else success_short_symbol
+        )
+        success_message = self.get_message(
+            success_text, self.SUCCESS, success_short_symbol
+        )
+        click.echo("\033[A\033[A" * ceil(len(text) / terminal_width))
+        success_message += " " * (len(text) % terminal_width - len(success_message))
+        click.echo(success_message)
 
-    def info(self, msg, short_symbol=False):
-        self._scream_warn(msg, self.INFO, short_symbol)
+    def info(self, text, short_symbol=True):
+        self.scream(text, self.INFO, short_symbol)
