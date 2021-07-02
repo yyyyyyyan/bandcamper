@@ -3,4 +3,5 @@ click==7.1.2
 click-option-group==0.5.2
 colorama==0.4.4
 lxml==4.6.3
+onesecmail==0.0.1
 requests[socks]==2.25.1
