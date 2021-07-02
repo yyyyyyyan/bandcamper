@@ -153,8 +153,10 @@ def main(
     urls,
 ):
     screamer = Screamer(verbosity, colored)
-    if proxy is not None:
-        http_proxy = https_proxy = proxy
+
+    http_proxy = http_proxy or proxy
+    https_proxy = https_proxy or proxy
+
     urls = list(urls)
     for file in input_files:
         urls.extend(file.read().strip().splitlines())
