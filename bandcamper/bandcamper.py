@@ -63,7 +63,6 @@ class Bandcamper:
         self,
         base_path,
         urls,
-        files,
         screamer,
         http_proxy=None,
         https_proxy=None,
@@ -72,8 +71,6 @@ class Bandcamper:
         # TODO: properly set kwargs
         self.base_path = Path(base_path)
         self.urls = {*urls}
-        for filename in files:
-            urls.extend(self._get_urls_from_file(filename))
         for url in urls:
             self.add_url(url)
         self.screamer = screamer
@@ -100,15 +97,6 @@ class Bandcamper:
                 response.raw._connection.sock.getpeername()[0] == self.CUSTOM_DOMAIN_IP
             )
         return valid
-
-    def _get_urls_from_file(self, filename):
-        urls = set()
-        try:
-            with open(filename) as url_list:
-                urls = set(url_list.read().split("\n"))
-        except FileNotFoundError:
-            self.screamer.error(f"File '{filename}' not found!")
-        return urls
 
     def _add_urls_from_artist(self, source_url):
         self.screamer.info(f"Scraping URLs from {source_url}")

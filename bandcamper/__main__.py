@@ -33,7 +33,7 @@ def configure(ctx, param, config_path=None):
     "--input",
     "input_files",
     multiple=True,
-    type=click.File(lazy=True),
+    type=click.File(),
     metavar="FILE",
     help="Download from URLs/artists subdomains listed on file. This option can be used multiple times",
 )
@@ -155,6 +155,9 @@ def main(
     screamer = Screamer(verbosity, colored)
     if proxy is not None:
         http_proxy = https_proxy = proxy
+    urls = list(urls)
+    for file in input_files:
+        urls.extend(file.read().strip().splitlines())
     bandcamp_downloader = Bandcamper(
         destination,
         *urls,
