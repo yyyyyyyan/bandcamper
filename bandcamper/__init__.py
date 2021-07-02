@@ -1,17 +1,9 @@
-from pathlib import Path
-
+from bandcamper.__version__ import __author__
+from bandcamper.__version__ import __author_email__
+from bandcamper.__version__ import __copyright__
+from bandcamper.__version__ import __description__
+from bandcamper.__version__ import __license__
+from bandcamper.__version__ import __title__
+from bandcamper.__version__ import __url__
+from bandcamper.__version__ import __version__
 from bandcamper.bandcamper import Bandcamper
-
-
-def read_file(*names, **kwargs):
-    params = {"encoding": "utf-8"}
-    params.update(kwargs)
-    file_path = Path(Path(__file__).parent.resolve(), *names)
-    with file_path.open(**params) as open_file:
-        content = open_file.read().strip()
-    return content
-
-
-__version__ = read_file("VERSION")
-
-__all__ = ["Bandcamper"]
