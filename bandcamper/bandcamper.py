@@ -60,24 +60,23 @@ class Bandcamper:
 
     def __init__(
         self,
-        base_path,
-        urls,
-        http_proxy=None,
-        https_proxy=None,
-        force_https=True,
+        *urls,
+        **kwargs,
     ):
         # TODO: properly set kwargs
-        self.base_path = Path(base_path)
-        self.urls = {*urls}
+        self.urls = set()
+        self.force_https = kwargs.pop("force_https", True)
+        self.proxies = {
+            "http": kwargs.pop("http_proxy", None),
+            "https": kwargs.pop("https_proxy", None),
+        }
+        self.headers = {"User-Agent": get_random_user_agent()}
         for url in urls:
             self.add_url(url)
-        self.proxies = {"http": http_proxy, "https": https_proxy}
-        self.force_https = True
-        self.headers = {"User-Agent": get_random_user_agent()}
 
     def _get_request_or_error(self, url, **kwargs):
-        proxies = kwargs.pop("proxies", self.proxies)
-        headers = kwargs.pop("headers", self.headers)
+        proxies = {**self.proxies, **kwargs.pop("proxies", {})}
+        headers = {**self.headers, **kwargs.pop("headers", {})}
         response = requests.get(url, proxies=proxies, headers=headers, **kwargs)
         response.raise_for_status()
         return response
@@ -130,13 +129,15 @@ class Bandcamper:
         data["art_url"] = soup.select_one("div#tralbumArt > a.popupImage")["href"]
         return data
 
-    def download_to_file(self, url, file_path):
+    def download_to_file(self, url, save_path, filename):
         with requests.get(
             url, stream=True, proxies=self.proxies, headers=self.headers
         ) as response:
             response.raise_for_status()
             file_ext = get_download_file_extension(response.headers.get("Content-Type"))
-            file_path = self.base_path / str(file_path).format(ext=file_ext)
+            file_path = Path(save_path)
+            file_path.mkdir(parents=True, exist_ok=True)
+            file_path /= filename.format(ext=file_ext)
             with file_path.open("wb") as file:
                 with click.progressbar(
                     response.iter_content(chunk_size=1024),
