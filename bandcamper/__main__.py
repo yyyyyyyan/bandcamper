@@ -163,7 +163,6 @@ def main(
     bandcamp_downloader = Bandcamper(
         destination,
         *urls,
-        screamer=screamer,
         http_proxy=http_proxy,
         https_proxy=https_proxy,
         force_https=force_https,
