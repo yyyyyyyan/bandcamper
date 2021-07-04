@@ -161,14 +161,19 @@ def main(
     for file in input_files:
         urls.extend(file.read().strip().splitlines())
     bandcamp_downloader = Bandcamper(
-        destination,
-        *urls,
         http_proxy=http_proxy,
         https_proxy=https_proxy,
         force_https=force_https,
     )
+    for url in urls:
+        try:
+            bandcamp_downloader.add_url(url)
+        except ValueError as err:
+            screamer.error(str(err))
     if not bandcamp_downloader.urls:
-        screamer.critical("You must pass at least one URL/artist subdomain to download")
+        screamer.critical(
+            "You must provice bandcamper at least one valid URL/artist subdomain to download"
+        )
     bandcamp_downloader.download_all(audio_formats)
 
 
