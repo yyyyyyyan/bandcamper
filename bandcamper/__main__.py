@@ -43,35 +43,15 @@ def configure(ctx, param, config_path=None):
     "--format",
     "audio_formats",
     multiple=True,
-    type=click.Choice(
-        [
-            "aac-hi",
-            "aiff-lossless",
-            "alac",
-            "flac",
-            "mp3-128",
-            "mp3-320",
-            "mp3-v0",
-            "vorbis",
-            "wav",
-        ]
-    ),
+    type=click.Choice(Bandcamper.DOWNLOAD_FORMATS),
     default=[
-        "aac-hi",
-        "aiff-lossless",
-        "alac",
-        "flac",
-        "mp3-128",
         "mp3-320",
-        "mp3-v0",
-        "vorbis",
-        "wav",
     ],
-    help="Preferred audio formats to download. This option can be used multiple times. If not specified, bandcamper will try to download every format available.",
+    help="Preferred audio formats to download. This option can be used multiple times. Defaults to mp3-320.",
 )
 @optgroup.option(
     "--fallback/--no-fallback",
-    default=False,
+    default=True,
     help="Download fallback mp3-128 audio file in case there are no other free downloads available",
 )
 @optgroup.group("Download Options")
@@ -152,6 +132,8 @@ def main(
     colored,
     urls,
 ):
+    if verbosity is None:
+        verbosity = 0
     screamer = Screamer(verbosity, colored)
 
     http_proxy = http_proxy or proxy
@@ -174,7 +156,15 @@ def main(
         screamer.critical(
             "You must provice bandcamper at least one valid URL/artist subdomain to download"
         )
-    bandcamp_downloader.download_all(audio_formats)
+
+    for url in bandcamp_downloader.urls:
+        try:
+            downloaded_path = bandcamp_downloader.download_from_url(url, *audio_formats)
+        except ValueError as err:
+            screamer.error(str(err))
+        else:
+            screamer.success()
+    print(bandcamp_downloader.urls)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,15 @@
 import json
 import re
 from pathlib import Path
+from time import sleep
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import click
 import requests
 from bs4 import BeautifulSoup
+from onesecmail import OneSecMail
+from onesecmail.validators import FromAddressValidator
 
 from bandcamper.requests_utils import get_download_file_extension
 from bandcamper.requests_utils import get_random_user_agent
@@ -58,6 +61,8 @@ class Bandcamper:
         "wav",
     ]
 
+    BANDCAMP_EMAIL_VALIDATOR = FromAddressValidator(r".+@email\.bandcamp\.com")
+
     def __init__(
         self,
         *urls,
@@ -74,12 +79,20 @@ class Bandcamper:
         for url in urls:
             self.add_url(url)
 
-    def _get_request_or_error(self, url, **kwargs):
+    def _request_or_error(self, method, url, **kwargs):
         proxies = {**self.proxies, **kwargs.pop("proxies", {})}
         headers = {**self.headers, **kwargs.pop("headers", {})}
-        response = requests.get(url, proxies=proxies, headers=headers, **kwargs)
+        response = requests.request(
+            method, url, proxies=proxies, headers=headers, **kwargs
+        )
         response.raise_for_status()
         return response
+
+    def _get_request_or_error(self, url, **kwargs):
+        return self._request_or_error("GET", url, **kwargs)
+
+    def _post_request_or_error(self, url, **kwargs):
+        return self._request_or_error("POST", url, **kwargs)
 
     def _is_valid_custom_domain(self, url):
         response = self._get_request_or_error(url, stream=True)
@@ -148,7 +161,7 @@ class Bandcamper:
                         file.write(chunk)
         return file_path
 
-    def _free_download(self, url, download_formats):
+    def _free_download(self, url, *download_formats):
         response = self._get_request_or_error(url)
         soup = BeautifulSoup(response.content, "lxml")
         download_data = json.loads(soup.find("div", id="pagedata")["data-blob"])
@@ -174,13 +187,61 @@ class Bandcamper:
             else:
                 raise ValueError(f"{fmt} download not found", True)
 
-    def download_all(self, download_formats):
+    def _get_download_url_from_email(
+        self,
+        url,
+        item_id,
+        item_type,
+        country="US",
+        postcode="0",
+        encoding_name="none",
+        timeout=60,
+    ):
+        artist_subdomain = urlparse(url).netloc
+        download_url = f"https://{artist_subdomain}/email_download"
+        mailbox = OneSecMail.generate_random_mailbox(
+            proxies=self.proxies, headers=self.headers
+        )
+        form_data = {
+            "encoding_name": encoding_name,
+            "item_id": item_id,
+            "item_type": item_type,
+            "address": mailbox.address,
+            "country": country,
+            "postcode": postcode,
+        }
+        response = self._post_request_or_error(download_url, data=form_data)
+        if not response.json()["ok"]:
+            raise ValueError(f"Email download request failed: {response.text}")
+        msgs = []
+        time_sleeping = 0
+        while not msgs:
+            if time_sleeping > timeout:
+                raise ValueError(
+                    "Bandcamp email not received. Try increasing the timeout."
+                )
+            sleep(1)
+            time_sleeping += 1
+            msgs = mailbox.get_messages(validators=[self.BANDCAMP_EMAIL_VALIDATOR])
+        soup = BeautifulSoup(msgs[0].html_body, "lxml")
+        return soup.find("a")["href"]
+
+    def download_from_url(self, url, *download_formats):
         download_formats = set(download_formats)
+        music_data = self._get_music_data(url)
+        if music_data is None:
+            raise ValueError(f"Failed to get music data from {url}", True)
 
+        if music_data.get("freeDownloadPage"):
+            return self._free_download(
+                music_data["freeDownloadPage"], *download_formats
+            )
+        if music_data["current"].get("require_email"):
+            download_url = self._get_download_url_from_email(
+                url, music_data["id"], music_data["item_type"]
+            )
+            return self._free_download(download_url, *download_formats)
+
+    def download_all(self, *download_formats):
         for url in self.urls:
-            music_data = self._get_music_data(url)
-            if music_data is None:
-                raise ValueError(f"Failed to get music data from {url}", True)
-
-            if music_data.get("freeDownloadPage"):
-                self._free_download(music_data["freeDownloadPage"], download_formats)
+            self.download_from_url(url, *download_formats)
