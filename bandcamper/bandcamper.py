@@ -4,6 +4,7 @@ from pathlib import Path
 from time import sleep
 from urllib.parse import urljoin
 from urllib.parse import urlparse
+from zipfile import ZipFile
 
 import click
 import requests
@@ -11,8 +12,9 @@ from bs4 import BeautifulSoup
 from onesecmail import OneSecMail
 from onesecmail.validators import FromAddressValidator
 
-from bandcamper.requests_utils import get_download_file_extension
-from bandcamper.requests_utils import get_random_user_agent
+from bandcamper.utils import get_download_file_extension
+from bandcamper.utils import get_random_filename_template
+from bandcamper.utils import get_random_user_agent
 
 
 class BandcampItem:
@@ -161,7 +163,7 @@ class Bandcamper:
                         file.write(chunk)
         return file_path
 
-    def _free_download(self, url, *download_formats):
+    def _free_download(self, url, destination, output, *download_formats):
         response = self._get_request_or_error(url)
         soup = BeautifulSoup(response.content, "lxml")
         download_data = json.loads(soup.find("div", id="pagedata")["data-blob"])
@@ -183,7 +185,16 @@ class Bandcamper:
                 else:
                     raise ValueError(f"Error downloading {fmt} from {fwd_url}")
                 print(download_url)
-                # self.download_to_file(download
+                file_path = self.download_to_file(
+                    download_url, destination, get_random_filename_template()
+                )
+                if file_path.suffix == ".zip":
+                    extract_to_path = file_path.parent / file_path.stem
+                    with ZipFile(file_path) as zip_file:
+                        zip_file.extractall(extract_to_path)
+                    file_path.unlink()
+                    return extract_to_path
+                return file_path
             else:
                 raise ValueError(f"{fmt} download not found", True)
 
@@ -226,22 +237,24 @@ class Bandcamper:
         soup = BeautifulSoup(msgs[0].html_body, "lxml")
         return soup.find("a")["href"]
 
-    def download_from_url(self, url, *download_formats):
+    def download_from_url(self, url, destination, output, *download_formats):
         download_formats = set(download_formats)
         music_data = self._get_music_data(url)
         if music_data is None:
             raise ValueError(f"Failed to get music data from {url}", True)
 
         if music_data.get("freeDownloadPage"):
-            return self._free_download(
+            file_path = self._free_download(
                 music_data["freeDownloadPage"], *download_formats
             )
-        if music_data["current"].get("require_email"):
+        elif music_data["current"].get("require_email"):
             download_url = self._get_download_url_from_email(
                 url, music_data["id"], music_data["item_type"]
             )
-            return self._free_download(download_url, *download_formats)
+            file_path = self._free_download(download_url, *download_formats)
+        else:
+            raise ValueError("Download separate MP3s")
 
-    def download_all(self, *download_formats):
+    def download_all(self, destination, output, *download_formats):
         for url in self.urls:
-            self.download_from_url(url, *download_formats)
+            self.download_from_url(url, destination, output, *download_formats)

@@ -159,7 +159,9 @@ def main(
 
     for url in bandcamp_downloader.urls:
         try:
-            downloaded_path = bandcamp_downloader.download_from_url(url, *audio_formats)
+            downloaded_path = bandcamp_downloader.download_from_url(
+                url, destination, output, *audio_formats
+            )
         except ValueError as err:
             screamer.error(str(err))
         else:
