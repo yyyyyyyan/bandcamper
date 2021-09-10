@@ -1,4 +1,4 @@
-"""Useful requests-related functions that doesn't fit anywhere else.
+"""Useful functions that doesn't fit anywhere else.
 
 Constants
 ---------
@@ -9,6 +9,7 @@ MIME_TYPES : dict
 """
 from mimetypes import guess_extension
 from random import choice as random_choice
+from uuid import uuid4
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36",
@@ -129,6 +130,10 @@ def get_random_user_agent():
         Available: https://archive.vn/xrdym. [Accessed: 12- Oct- 2020].
     """
     return random_choice(USER_AGENTS)
+
+
+def get_random_filename_template():
+    return uuid4().hex[:16] + ".{ext}"
 
 
 def get_download_file_extension(file_type):
