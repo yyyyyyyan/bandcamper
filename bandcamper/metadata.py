@@ -1,4 +1,5 @@
 from mimetypes import guess_type
+from pathlib import Path
 
 from mutagen import File
 from mutagen.aiff import AIFF
@@ -16,6 +17,7 @@ from mutagen.mp4 import AtomDataType
 from mutagen.mp4 import MP4
 from mutagen.mp4 import MP4Cover
 from mutagen.oggvorbis import OggVorbis
+from mutagen.wave import WAVE
 
 
 class TrackMetadata:
@@ -188,6 +190,10 @@ class AIFFMetadata(MP3Metadata):
     FILE_CLASS = AIFF
 
 
+class WAVMetadata(MP3Metadata):
+    FILE_CLASS = WAVE
+
+
 class MP4Metadata(TrackMetadata):
     FILE_CLASS = MP4
     TITLE_TAG = "©nam"
@@ -339,3 +345,21 @@ class VorbisMetadata(FLACMetadata):
 
     def set_cover_art_from_file(self, file_path):
         raise NotImplementedError
+
+
+def get_track_metadata(file_path):
+    file_path = Path(file_path)
+    ext = file_path.suffix
+    if ext == ".mp3":
+        return MP3Metadata(file_path)
+    if ext == ".aiff":
+        return AIFFMetadata(file_path)
+    if ext == ".wav":
+        return WAVMetadata(file_path)
+    if ext == ".m4a":
+        return MP4Metadata(file_path)
+    if ext == ".flac":
+        return FLACMetadata(file_path)
+    if ext == ".ogg":
+        return VorbisMetadata(file_path)
+    raise ValueError(f"Extension {ext} not recognized")
