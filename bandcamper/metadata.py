@@ -15,6 +15,7 @@ from mutagen.mp3 import MP3
 from mutagen.mp4 import AtomDataType
 from mutagen.mp4 import MP4
 from mutagen.mp4 import MP4Cover
+from mutagen.oggvorbis import OggVorbis
 
 
 class TrackMetadata:
@@ -327,3 +328,14 @@ class FLACMetadata(MP4Metadata):
             picture.data = file.read()
         self.file.clear_pictures()
         self.file.add_picture(picture)
+
+
+class VorbisMetadata(FLACMetadata):
+    FILE_CLASS = OggVorbis
+
+    @property
+    def cover_art(self):
+        return None
+
+    def set_cover_art_from_file(self, file_path):
+        raise NotImplementedError
