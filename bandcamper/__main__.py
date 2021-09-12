@@ -66,7 +66,7 @@ def configure(ctx, param, config_path=None):
     "-o",
     "--output",
     metavar="TEMPLATE",
-    default="{artist_name}/{album_title}/{track_title}.{ext}",
+    default="{artist}/{album}/{track}.{ext}",
     help="Output filename template. See the 'Output Template' section of the README for all the info",
 )
 @optgroup.group("Request Options")
@@ -143,9 +143,11 @@ def main(
     for file in input_files:
         urls.extend(file.read().strip().splitlines())
     bandcamp_downloader = Bandcamper(
+        fallback=fallback,
         http_proxy=http_proxy,
         https_proxy=https_proxy,
         force_https=force_https,
+        screamer=screamer,
     )
     for url in urls:
         try:

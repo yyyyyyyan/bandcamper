@@ -12,18 +12,10 @@ from bs4 import BeautifulSoup
 from onesecmail import OneSecMail
 from onesecmail.validators import FromAddressValidator
 
+from bandcamper.screamo import Screamer
 from bandcamper.utils import get_download_file_extension
 from bandcamper.utils import get_random_filename_template
 from bandcamper.utils import get_random_user_agent
-
-
-class BandcampItem:
-    def __init__(self, item_type, **music_data):
-        self.item_type = item_type
-
-    @classmethod
-    def from_url(cls, url):
-        pass
 
 
 class Bandcamper:
@@ -72,12 +64,14 @@ class Bandcamper:
     ):
         # TODO: properly set kwargs
         self.urls = set()
+        self.fallback = kwargs.pop("fallback", True)
         self.force_https = kwargs.pop("force_https", True)
         self.proxies = {
             "http": kwargs.pop("http_proxy", None),
             "https": kwargs.pop("https_proxy", None),
         }
         self.headers = {"User-Agent": get_random_user_agent()}
+        self.screamer = kwargs.pop("screamer", Screamer())
         for url in urls:
             self.add_url(url)
 
@@ -142,6 +136,9 @@ class Bandcamper:
         soup = BeautifulSoup(response.content, "lxml")
         data = json.loads(soup.find("script", {"data-tralbum": True})["data-tralbum"])
         data["art_url"] = soup.select_one("div#tralbumArt > a.popupImage")["href"]
+        from_album_span = soup.select_one("span.fromAlbum")
+        if from_album_span is not None:
+            data["album_title"] = from_album_span.text
         return data
 
     def download_to_file(self, url, save_path, filename):
@@ -163,11 +160,12 @@ class Bandcamper:
                         file.write(chunk)
         return file_path
 
-    def _free_download(self, url, destination, output, *download_formats):
+    def _free_download(self, url, destination, *download_formats):
         response = self._get_request_or_error(url)
         soup = BeautifulSoup(response.content, "lxml")
         download_data = json.loads(soup.find("div", id="pagedata")["data-blob"])
         downloadable = download_data["download_items"][0]["downloads"]
+        downloaded_paths = []
         for fmt in download_formats:
             if fmt in downloadable:
                 parsed_url = urlparse(downloadable[fmt]["url"])
@@ -183,7 +181,8 @@ class Bandcamper:
                 elif fwd_data["result"].lower() == "err":
                     download_url = fwd_data["retry_url"]
                 else:
-                    raise ValueError(f"Error downloading {fmt} from {fwd_url}")
+                    self.screamer.error(f"Error downloading {fmt} from {fwd_url}")
+                    continue
                 print(download_url)
                 file_path = self.download_to_file(
                     download_url, destination, get_random_filename_template()
@@ -193,10 +192,11 @@ class Bandcamper:
                     with ZipFile(file_path) as zip_file:
                         zip_file.extractall(extract_to_path)
                     file_path.unlink()
-                    return extract_to_path
-                return file_path
+                    downloaded_paths.append(extract_to_path)
+                downloaded_paths.append(file_path)
             else:
-                raise ValueError(f"{fmt} download not found", True)
+                self.screamer.error(f"{fmt} download not found", short_symbol=True)
+        return downloaded_paths
 
     def _get_download_url_from_email(
         self,
@@ -237,23 +237,71 @@ class Bandcamper:
         soup = BeautifulSoup(msgs[0].html_body, "lxml")
         return soup.find("a")["href"]
 
+    def download_fallback_mp3(self, track_info, destination):
+        file_paths = []
+        for track in track_info:
+            if track.get("file"):
+                file_paths.append(
+                    self.download_to_file(
+                        track["file"]["mp3-128"],
+                        destination,
+                        get_random_filename_template(),
+                    )
+                )
+        return file_paths
+
     def download_from_url(self, url, destination, output, *download_formats):
         download_formats = set(download_formats)
+        download_mp3 = False
+        if "mp3-128" in download_formats:
+            download_formats.remove("mp3-128")
+            download_mp3 = True
+
         music_data = self._get_music_data(url)
         if music_data is None:
             raise ValueError(f"Failed to get music data from {url}", True)
 
         if music_data.get("freeDownloadPage"):
-            file_path = self._free_download(
-                music_data["freeDownloadPage"], *download_formats
+            file_paths = self._free_download(
+                music_data["freeDownloadPage"], destination, *download_formats
             )
         elif music_data["current"].get("require_email"):
             download_url = self._get_download_url_from_email(
                 url, music_data["id"], music_data["item_type"]
             )
-            file_path = self._free_download(download_url, *download_formats)
+            file_paths = self._free_download(
+                download_url, destination, *download_formats
+            )
+        elif self.fallback or download_mp3:
+            file_paths = self.download_fallback_mp3(
+                music_data["trackinfo"], destination
+            )
+            download_mp3 = False
         else:
-            raise ValueError("Download separate MP3s")
+            raise ValueError(
+                f"No free download found for {url}. Try setting fallback to True."
+            )
+
+        if download_mp3:
+            file_paths.extend(
+                self.download_fallback_mp3(music_data["trackinfo"], destination)
+            )
+
+        output_data = {
+            "artist": music_data["artist"],
+            "album": music_data["current"]["title"]
+            if music_data["item_type"] == "album"
+            else music_data.get("album_title", ""),
+            "year": music_data["current"]["release_date"].split()[2],
+            "tracks": {
+                track["track_num"]: track["title"] for track in music_data["trackinfo"]
+            },
+        }
+
+        for file_path in file_paths:
+            if file_path.is_dir():
+                for track_path in file_path.iterdir():
+                    pass
 
     def download_all(self, destination, output, *download_formats):
         for url in self.urls:
