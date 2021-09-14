@@ -12,6 +12,8 @@ from bs4 import BeautifulSoup
 from onesecmail import OneSecMail
 from onesecmail.validators import FromAddressValidator
 
+from bandcamper.metadata.utils import get_track_metadata
+from bandcamper.metadata.utils import get_track_output_context
 from bandcamper.screamo import Screamer
 from bandcamper.utils import get_download_file_extension
 from bandcamper.utils import get_random_filename_template
@@ -251,6 +253,7 @@ class Bandcamper:
         return file_paths
 
     def download_from_url(self, url, destination, output, *download_formats):
+        destination = Path(destination)
         download_formats = set(download_formats)
         download_mp3 = False
         if "mp3-128" in download_formats:
@@ -287,21 +290,23 @@ class Bandcamper:
                 self.download_fallback_mp3(music_data["trackinfo"], destination)
             )
 
-        output_data = {
-            "artist": music_data["artist"],
-            "album": music_data["current"]["title"]
-            if music_data["item_type"] == "album"
-            else music_data.get("album_title", ""),
-            "year": music_data["current"]["release_date"].split()[2],
-            "tracks": {
-                track["track_num"]: track["title"] for track in music_data["trackinfo"]
-            },
+        tracks = {
+            track["track_num"]: track["title"] for track in music_data["trackinfo"]
         }
-
+        artist = music_data["artist"]
+        album = (
+            music_data["current"]["title"]
+            if music_data["item_type"] == "album"
+            else music_data.get("album_title", "")
+        )
+        year = music_data["current"]["release_date"].split()[2]
         for file_path in file_paths:
             if file_path.is_dir():
                 for track_path in file_path.iterdir():
-                    pass
+                    # TODO: check if its a song
+                    track_output_context = get_track_output_context(
+                        track_path, artist, album, year
+                    )
 
     def download_all(self, destination, output, *download_formats):
         for url in self.urls:
