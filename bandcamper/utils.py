@@ -133,7 +133,7 @@ def get_random_user_agent():
 
 
 def get_random_filename_template():
-    return uuid4().hex[:16] + ".{ext}"
+    return uuid4().hex[:16] + "{ext}"
 
 
 def get_download_file_extension(file_type):

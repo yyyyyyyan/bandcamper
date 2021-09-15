@@ -35,14 +35,6 @@ class TrackMetadata:
 
     def __init__(self, filename):
         self.file = self.FILE_CLASS(filename)
-        self.title = None
-        self.track_number = None
-        self.track_total = None
-        self.album = None
-        self.artist = None
-        self.album_artist = None
-        self.lyrics = None
-        self.cover_art = None
 
     def save(self):
         self.file.save()

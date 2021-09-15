@@ -66,8 +66,14 @@ def configure(ctx, param, config_path=None):
     "-o",
     "--output",
     metavar="TEMPLATE",
-    default="{artist}/{album}/{track}.{ext}",
+    default="{artist}/{album}/{track_num:02d} - {track}.{ext}",
     help="Output filename template. See the 'Output Template' section of the README for all the info",
+)
+@optgroup.option(
+    "--output-extra",
+    metavar="TEMPLATE",
+    default="{artist}/{album}/{filename}",
+    help="Output filename template for extra files. See the 'Extra Output Template' section of the README for all the info",
 )
 @optgroup.group("Request Options")
 @optgroup.option(
@@ -124,6 +130,7 @@ def main(
     fallback,
     destination,
     output,
+    output_extra,
     http_proxy,
     https_proxy,
     proxy,
@@ -159,16 +166,8 @@ def main(
             "You must provice bandcamper at least one valid URL/artist subdomain to download"
         )
 
-    for url in bandcamp_downloader.urls:
-        try:
-            downloaded_path = bandcamp_downloader.download_from_url(
-                url, destination, output, *audio_formats
-            )
-        except ValueError as err:
-            screamer.error(str(err))
-        else:
-            screamer.success()
-    print(bandcamp_downloader.urls)
+    bandcamp_downloader.download_all(destination, output, output_extra, *audio_formats)
+    # print(bandcamp_downloader.urls)
 
 
 if __name__ == "__main__":

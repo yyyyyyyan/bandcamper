@@ -13,35 +13,43 @@ FILENAME_REGEX = re.compile(
     flags=re.I,
 )
 
+suffix_to_metadata = {
+    ".mp3": MP3Metadata,
+    ".aiff": AIFFMetadata,
+    ".wav": WAVEMetadata,
+    ".m4a": MP4Metadata,
+    ".flac": FLACMetadata,
+    ".ogg": VorbisMetadata,
+}
+
 
 def get_track_metadata(file_path):
     file_path = Path(file_path)
     ext = file_path.suffix
-    if ext == ".mp3":
-        return MP3Metadata(file_path)
-    if ext == ".aiff":
-        return AIFFMetadata(file_path)
-    if ext == ".wav":
-        return WAVEMetadata(file_path)
-    if ext == ".m4a":
-        return MP4Metadata(file_path)
-    if ext == ".flac":
-        return FLACMetadata(file_path)
-    if ext == ".ogg":
-        return VorbisMetadata(file_path)
-    raise ValueError(f"Extension {ext} not recognized")
+    if ext not in suffix_to_metadata:
+        raise ValueError(f"Extension {file_path} not recognized")
+    return suffix_to_metadata[ext](file_path)
 
 
 def parse_filename(filename):
     match = FILENAME_REGEX.match(filename)
     if match is None:
         raise ValueError(f"Error parsing filename '{filename}'")
-    track_data = match.groupdict()
-    track_data["track_number"] = int(track_data["track_number"])
-    return track_data
+    return match.groupdict()
 
 
-def get_track_output_context(track_path, artist, album, year):
+def get_track_output_context(track_path, tracks):
+
     track_metadata = get_track_metadata(track_path)
-    filename = Path(track_metadata.file.filename).name
-    return
+    file_path = Path(track_metadata.file.filename)
+    filename_data = parse_filename(file_path.name)
+    track_number = track_metadata.track_number or int(filename_data["track_number"])
+    track_title = (
+        tracks.get(track_number) or track_metadata.title or filename_data["title"]
+    )
+    context = {
+        "track": track_title,
+        "track_num": track_number,
+        "ext": file_path.suffix.split(".")[-1],
+    }
+    return context
