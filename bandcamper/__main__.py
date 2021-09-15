@@ -122,7 +122,7 @@ def configure(ctx, param, config_path=None):
     expose_value=False,
     help="Read option defaults from the specified JSON config file. Defaults to bandcamper_config.json",
 )
-@click.version_option(bandcamper.__version__, "-v", "--version")
+@click.version_option(bandcamper.__version__, "-V", "--version")
 @click.help_option("-h", "--help")
 def main(
     input_files,

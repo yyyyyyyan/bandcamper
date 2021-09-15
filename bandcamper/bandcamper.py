@@ -144,8 +144,6 @@ class Bandcamper:
         return data
 
     def download_to_file(self, url, save_path, filename):
-        print("baixando")
-        print(url)
         with requests.get(
             url, stream=True, proxies=self.proxies, headers=self.headers
         ) as response:
@@ -187,7 +185,6 @@ class Bandcamper:
                 else:
                     self.screamer.error(f"Error downloading {fmt} from {fwd_url}")
                     continue
-                print(download_url)
                 file_path = self.download_to_file(
                     download_url, destination, get_random_filename_template()
                 )
@@ -213,7 +210,6 @@ class Bandcamper:
         encoding_name="none",
         timeout=60,
     ):
-        print("por email")
         artist_subdomain = urlparse(url).netloc
         download_url = f"https://{artist_subdomain}/email_download"
         mailbox = OneSecMail.generate_random_mailbox(
@@ -270,6 +266,7 @@ class Bandcamper:
     def download_from_url(
         self, url, destination, output, output_extra, *download_formats
     ):
+        self.screamer.info(f"Searching available downloads for URL {url}")
         destination = Path(destination)
         download_formats = set(download_formats)
         download_mp3 = False
@@ -279,7 +276,8 @@ class Bandcamper:
 
         music_data = self._get_music_data(url)
         if music_data is None:
-            raise ValueError(f"Failed to get music data from {url}", True)
+            self.screamer.error(f"Failed to get music data from {url}")
+            return
 
         tracks = {
             track["track_num"]: track["title"] for track in music_data["trackinfo"]
@@ -291,13 +289,16 @@ class Bandcamper:
             else music_data.get("album_title", "")
         )
         year = music_data["current"]["release_date"].split()[2]
+        title = music_data["current"]["title"]
+        downloading_str = f"Downloading {artist} - {title}"
 
         if music_data.get("freeDownloadPage"):
+            self.screamer.success(f"Free download found! {downloading_str}")
             file_paths = self._free_download(
                 music_data["freeDownloadPage"], destination, *download_formats
             )
-            print(file_paths)
         elif music_data["current"].get("require_email"):
+            self.screamer.success(f"Email download found! {downloading_str}")
             download_url = self._get_download_url_from_email(
                 url, music_data["id"], music_data["item_type"]
             )
@@ -305,6 +306,7 @@ class Bandcamper:
                 download_url, destination, *download_formats
             )
         elif self.fallback or download_mp3:
+            self.screamer.success(f"MP3-128 download found! {downloading_str}")
             file_paths = self.download_fallback_mp3(
                 music_data["trackinfo"], artist, album, destination
             )
