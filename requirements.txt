@@ -1,8 +1,7 @@
-beautifulsoup4==4.9.3
-click==7.1.2
-click-option-group==0.5.2
-colorama==0.4.4
-lxml==4.6.3
-mutagen==1.45.1
-onesecmail==0.0.1
-requests[socks]==2.25.1
+beautifulsoup4>=4.10.0
+click>=8.0.1
+click-option-group>=0.5.3
+lxml>=4.6.3
+mutagen>=1.45.1
+onesecmail>=0.0.1
+requests[socks]>=2.26.0

@@ -167,7 +167,6 @@ def main(
         )
 
     bandcamp_downloader.download_all(destination, output, output_extra, *audio_formats)
-    # print(bandcamp_downloader.urls)
 
 
 if __name__ == "__main__":
