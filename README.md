@@ -82,10 +82,6 @@ Options:
 
 The output template is a string that can contain special variables and will be joined to the destination directory to determine the final path of the downloaded tracks.
 
-1 branch
-0 tags
-Latest commit
-
 This template follows the Python string formatting scheme of `{var}` and is, by default, `"{artist}/{album}/{track_num:02d} - {track}.{ext}"`. You can change the template through the -o/--output flag.
 
 These are the available variables you can use in the template:
