@@ -143,7 +143,7 @@ class Bandcamper:
             data["album_title"] = from_album_span.text
         return data
 
-    def download_to_file(self, url, save_path, filename):
+    def download_to_file(self, url, save_path, filename, label=None):
         with requests.get(
             url, stream=True, proxies=self.proxies, headers=self.headers
         ) as response:
@@ -152,11 +152,12 @@ class Bandcamper:
             file_path = Path(save_path)
             file_path.mkdir(parents=True, exist_ok=True)
             file_path /= filename.format(ext=file_ext)
+            label = label or file_path.name
             with file_path.open("wb") as file:
                 with click.progressbar(
                     response.iter_content(chunk_size=1024),
                     length=int(response.headers.get("Content-Length")) // 1024,
-                    label=file_path.name,
+                    label=label,
                 ) as bar:
                     for chunk in bar:
                         file.write(chunk)
@@ -186,7 +187,10 @@ class Bandcamper:
                     self.screamer.error(f"Error downloading {fmt} from {fwd_url}")
                     continue
                 file_path = self.download_to_file(
-                    download_url, destination, get_random_filename_template()
+                    download_url,
+                    destination,
+                    get_random_filename_template(),
+                    f"{fmt}.zip",
                 )
                 if file_path.suffix == ".zip":
                     extract_to_path = file_path.parent / file_path.stem
@@ -254,11 +258,13 @@ class Bandcamper:
         file_paths = []
         for track in track_info:
             if track.get("file"):
+                track_num = f"{track['track_num']:02d}"
                 file_paths.append(
                     self.download_to_file(
                         track["file"]["mp3-128"],
                         destination,
-                        f"{artist} - {album} - {track['track_num']:02d} {track['title']}{{ext}}",
+                        f"{artist} - {album} - {track_num} {track['title']}{{ext}}",
+                        f"{track_num}.mp3",
                     )
                 )
         return file_paths
