@@ -2,21 +2,21 @@ default_language_version:
   python: python3
 repos:
   - repo: https://github.com/asottile/reorder_python_imports
-    rev: v2.4.0
+    rev: v2.6.0
     hooks:
       - id: reorder-python-imports
         args: [--py37-plus]
   - repo: https://github.com/psf/black
-    rev: 20.8b1
+    rev: 21.9b0
     hooks:
       - id: black
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v4.0.1
     hooks:
+      - id: check-docstring-first
       - id: check-json
       - id: check-merge-conflict
       - id: check-yaml
-      - id: detect-private-key
       - id: end-of-file-fixer
       - id: fix-encoding-pragma
         args: ["--remove"]
@@ -27,7 +27,7 @@ repos:
       - id: requirements-txt-fixer
       - id: trailing-whitespace
   - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.0
+    rev: 3.9.2
     hooks:
       - id: flake8
         args: ["--extend-ignore=E501"]
