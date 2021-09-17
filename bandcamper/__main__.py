@@ -7,6 +7,8 @@ from click_option_group import optgroup
 
 import bandcamper
 from bandcamper import Bandcamper
+from bandcamper.requests.requester import Requester
+from bandcamper.requests.utils import get_random_user_agent
 from bandcamper.screamo import Screamer
 
 
@@ -77,6 +79,11 @@ def configure(ctx, param, config_path=None):
 )
 @optgroup.group("Request Options")
 @optgroup.option(
+    "--random-user-agent",
+    is_flag=True,
+    help="Use random User-Agent for Bandcamp requests",
+)
+@optgroup.option(
     "--http-proxy",
     metavar="URL",
     envvar="HTTP_PROXY",
@@ -131,6 +138,7 @@ def main(
     destination,
     output,
     output_extra,
+    random_user_agent,
     http_proxy,
     https_proxy,
     proxy,
@@ -143,18 +151,21 @@ def main(
         verbosity = 0
     screamer = Screamer(verbosity, colored)
 
+    user_agent = get_random_user_agent() if random_user_agent else None
     http_proxy = http_proxy or proxy
     https_proxy = https_proxy or proxy
+
+    requester = Requester(user_agent, http_proxy, https_proxy)
 
     urls = list(urls)
     for file in input_files:
         urls.extend(file.read().strip().splitlines())
+
     bandcamp_downloader = Bandcamper(
         fallback=fallback,
-        http_proxy=http_proxy,
-        https_proxy=https_proxy,
         force_https=force_https,
         screamer=screamer,
+        requester=requester,
     )
     for url in urls:
         try:

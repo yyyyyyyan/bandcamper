@@ -32,7 +32,7 @@ pipx install bandcamper
 
 ## Usage
 
-Call `bandcamper` in the command line:
+Call `bandcamper` through the command line:
 
 ```
 Usage: bandcamper [OPTIONS] URL [URL...]
@@ -59,6 +59,7 @@ Options:
                                   See the 'Extra Output Template' section of
                                   the README for all the info
   Request Options:
+    --random-user-agent           Use random User-Agent for Bandcamp requests
     --http-proxy URL              Proxy to use for HTTP connections
     --https-proxy URL             Proxy to use for HTTPS connections
     --proxy URL                   Proxy to use for all connections. This

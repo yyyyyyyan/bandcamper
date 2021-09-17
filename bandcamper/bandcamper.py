@@ -6,18 +6,15 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 from zipfile import ZipFile
 
-import click
-import requests
 from bs4 import BeautifulSoup
 from onesecmail import OneSecMail
 from onesecmail.validators import FromAddressValidator
 
 from bandcamper.metadata.utils import get_track_output_context
 from bandcamper.metadata.utils import suffix_to_metadata
+from bandcamper.requests.requester import Requester
 from bandcamper.screamo import Screamer
-from bandcamper.utils import get_download_file_extension
 from bandcamper.utils import get_random_filename_template
-from bandcamper.utils import get_random_user_agent
 
 
 class Bandcamper:
@@ -62,42 +59,25 @@ class Bandcamper:
     def __init__(
         self,
         *urls,
-        **kwargs,
+        fallback=True,
+        force_https=True,
+        screamer=None,
+        requester=None,
     ):
         # TODO: properly set kwargs
         self.urls = set()
-        self.fallback = kwargs.pop("fallback", True)
-        self.force_https = kwargs.pop("force_https", True)
-        self.proxies = {
-            "http": kwargs.pop("http_proxy", None),
-            "https": kwargs.pop("https_proxy", None),
-        }
-        self.headers = {"User-Agent": get_random_user_agent()}
-        self.screamer = kwargs.pop("screamer", Screamer())
+        self.fallback = fallback
+        self.force_https = force_https
+        self.screamer = screamer or Screamer()
+        self.requester = requester or Requester()
         for url in urls:
             self.add_url(url)
 
-    def _request_or_error(self, method, url, **kwargs):
-        proxies = {**self.proxies, **kwargs.pop("proxies", {})}
-        headers = {**self.headers, **kwargs.pop("headers", {})}
-        response = requests.request(
-            method, url, proxies=proxies, headers=headers, **kwargs
-        )
-        response.raise_for_status()
-        return response
-
-    def _get_request_or_error(self, url, **kwargs):
-        return self._request_or_error("GET", url, **kwargs)
-
-    def _post_request_or_error(self, url, **kwargs):
-        return self._request_or_error("POST", url, **kwargs)
-
     def _is_valid_custom_domain(self, url):
-        response = self._get_request_or_error(url, stream=True)
-        return response.raw._connection.sock.getpeername()[0] == self.CUSTOM_DOMAIN_IP
+        return self.requester.get_ip_from_url(url) == self.CUSTOM_DOMAIN_IP
 
     def _add_urls_from_artist(self, source_url):
-        response = self._get_request_or_error(source_url)
+        response = self.requester.get_request_or_error(source_url)
         base_url = "https://" + urlparse(source_url).netloc.strip("/ ")
         soup = BeautifulSoup(response.content, "lxml")
         for a in soup.find("ol", id="music-grid").find_all("a"):
@@ -134,7 +114,7 @@ class Bandcamper:
                 raise ValueError(f"{name} is not a valid Bandcamp URL or subdomain")
 
     def _get_music_data(self, url):
-        response = self._get_request_or_error(url)
+        response = self.requester.get_request_or_error(url)
         soup = BeautifulSoup(response.content, "lxml")
         data = json.loads(soup.find("script", {"data-tralbum": True})["data-tralbum"])
         data["art_url"] = soup.select_one("div#tralbumArt > a.popupImage")["href"]
@@ -143,28 +123,8 @@ class Bandcamper:
             data["album_title"] = from_album_span.text
         return data
 
-    def download_to_file(self, url, save_path, filename, label=None):
-        with requests.get(
-            url, stream=True, proxies=self.proxies, headers=self.headers
-        ) as response:
-            response.raise_for_status()
-            file_ext = get_download_file_extension(response.headers.get("Content-Type"))
-            file_path = Path(save_path)
-            file_path.mkdir(parents=True, exist_ok=True)
-            file_path /= filename.format(ext=file_ext)
-            label = label or file_path.name
-            with file_path.open("wb") as file:
-                with click.progressbar(
-                    response.iter_content(chunk_size=1024),
-                    length=int(response.headers.get("Content-Length")) // 1024,
-                    label=label,
-                ) as bar:
-                    for chunk in bar:
-                        file.write(chunk)
-        return file_path
-
     def _free_download(self, url, destination, *download_formats):
-        response = self._get_request_or_error(url)
+        response = self.requester.get_request_or_error(url)
         soup = BeautifulSoup(response.content, "lxml")
         download_data = json.loads(soup.find("div", id="pagedata")["data-blob"])
         downloadable = download_data["download_items"][0]["downloads"]
@@ -174,10 +134,10 @@ class Bandcamper:
                 parsed_url = urlparse(downloadable[fmt]["url"])
                 stat_path = parsed_url.path.replace("/download/", "/statdownload/")
                 fwd_url = parsed_url._replace(path=stat_path).geturl()
-                fwd_data = self._get_request_or_error(
+                fwd_data = self.requester.get_request_or_error(
                     fwd_url,
                     params={".vrs": 1},
-                    headers={**self.headers, "Accept": "application/json"},
+                    headers={"Accept": "application/json"},
                 ).json()
                 if fwd_data["result"].lower() == "ok":
                     download_url = fwd_data["download_url"]
@@ -186,7 +146,7 @@ class Bandcamper:
                 else:
                     self.screamer.error(f"Error downloading {fmt} from {fwd_url}")
                     continue
-                file_path = self.download_to_file(
+                file_path = self.requester.download_to_file(
                     download_url,
                     destination,
                     get_random_filename_template(),
@@ -217,7 +177,8 @@ class Bandcamper:
         artist_subdomain = urlparse(url).netloc
         download_url = f"https://{artist_subdomain}/email_download"
         mailbox = OneSecMail.generate_random_mailbox(
-            proxies=self.proxies, headers=self.headers
+            proxies=self.requester.session.proxies,
+            headers=self.requester.session.headers,
         )
         form_data = {
             "encoding_name": encoding_name,
@@ -227,7 +188,7 @@ class Bandcamper:
             "country": country,
             "postcode": postcode,
         }
-        response = self._post_request_or_error(download_url, data=form_data)
+        response = self.requester.post_request_or_error(download_url, data=form_data)
         if not response.json()["ok"]:
             raise ValueError(f"Email download request failed: {response.text}")
         msgs = []
@@ -260,7 +221,7 @@ class Bandcamper:
             if track.get("file"):
                 track_num = f"{track['track_num']:02d}"
                 file_paths.append(
-                    self.download_to_file(
+                    self.requester.download_to_file(
                         track["file"]["mp3-128"],
                         destination,
                         f"{artist} - {album} - {track_num} {track['title']}{{ext}}",
