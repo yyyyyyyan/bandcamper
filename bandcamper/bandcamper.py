@@ -64,7 +64,6 @@ class Bandcamper:
         screamer=None,
         requester=None,
     ):
-        # TODO: properly set kwargs
         self.urls = set()
         self.fallback = fallback
         self.force_https = force_https
