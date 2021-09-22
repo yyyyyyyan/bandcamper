@@ -9,6 +9,7 @@ from zipfile import ZipFile
 from bs4 import BeautifulSoup
 from onesecmail import OneSecMail
 from onesecmail.validators import FromAddressValidator
+from requests import HTTPError
 
 from bandcamper.metadata.utils import get_track_output_context
 from bandcamper.metadata.utils import suffix_to_metadata
@@ -79,7 +80,10 @@ class Bandcamper:
         response = self.requester.get_request_or_error(source_url)
         base_url = "https://" + urlparse(source_url).netloc.strip("/ ")
         soup = BeautifulSoup(response.content, "lxml")
-        for a in soup.find("ol", id="music-grid").find_all("a"):
+        music_grid = soup.find("ol", id="music-grid")
+        if music_grid is None:
+            raise ValueError
+        for a in music_grid.find_all("a"):
             parsed_url = urlparse(a.get("href"))
             if parsed_url.scheme:
                 url = urljoin(
@@ -93,7 +97,15 @@ class Bandcamper:
     def add_url(self, name):
         if self.BANDCAMP_SUBDOMAIN_REGEX.fullmatch(name):
             url = f"https://{name.lower()}.bandcamp.com/music"
-            self._add_urls_from_artist(url)
+            try:
+                self._add_urls_from_artist(url)
+            except HTTPError as exc:
+                if exc.response.status_code == 404:
+                    self.screamer.error(f"{name} not found")
+                else:
+                    self.screamer.error(f"Request error while getting URLs for {name}")
+            except ValueError:
+                self.screamer.error(f"No releases found for {name}")
         else:
             parsed_url = urlparse(name)
             if not parsed_url.scheme:
@@ -113,14 +125,22 @@ class Bandcamper:
                 raise ValueError(f"{name} is not a valid Bandcamp URL or subdomain")
 
     def _get_music_data(self, url):
-        response = self.requester.get_request_or_error(url)
-        soup = BeautifulSoup(response.content, "lxml")
-        data = json.loads(soup.find("script", {"data-tralbum": True})["data-tralbum"])
-        data["art_url"] = soup.select_one("div#tralbumArt > a.popupImage")["href"]
-        from_album_span = soup.select_one("span.fromAlbum")
-        if from_album_span is not None:
-            data["album_title"] = from_album_span.text
-        return data
+        try:
+            response = self.requester.get_request_or_error(url)
+        except HTTPError as exc:
+            if exc.response.status_code == 404:
+                raise ValueError(f"{url} not found")
+            raise exc
+        else:
+            soup = BeautifulSoup(response.content, "lxml")
+            data = json.loads(
+                soup.find("script", {"data-tralbum": True})["data-tralbum"]
+            )
+            data["art_url"] = soup.select_one("div#tralbumArt > a.popupImage")["href"]
+            from_album_span = soup.select_one("span.fromAlbum")
+            if from_album_span is not None:
+                data["album_title"] = from_album_span.text
+            return data
 
     def _free_download(self, url, destination, *download_formats):
         response = self.requester.get_request_or_error(url)
@@ -240,8 +260,18 @@ class Bandcamper:
             download_formats.remove("mp3-128")
             download_mp3 = True
 
-        music_data = self._get_music_data(url)
-        if music_data is None:
+        music_data = dict()
+        try:
+            music_data = self._get_music_data(url)
+        except ValueError as exc:
+            self.screamer.error(str(exc))
+            return
+        except HTTPError as exc:
+            self.screamer.error(
+                f"Request error ({exc.response.status_code}) when getting music data from {url}"
+            )
+            return
+        if not music_data:
             self.screamer.error(f"Failed to get music data from {url}")
             return
 
