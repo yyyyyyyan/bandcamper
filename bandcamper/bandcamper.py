@@ -340,14 +340,15 @@ class Bandcamper:
                     self.screamer.success(
                         f"New file: {new_path}", verbose=True, short_symbol=True
                     )
+                self.screamer.success(
+                    f"New directory: {new_path.parent}", short_symbol=True
+                )
                 file_path.rmdir()
             else:
                 new_path = self.move_file(
                     file_path, destination, output, output_extra, tracks, context
                 )
-                self.screamer.success(
-                    f"New file: {new_path}", verbose=True, short_symbol=True
-                )
+                self.screamer.success(f"New file: {new_path}", short_symbol=True)
 
     def download_all(self, destination, output, output_extra, *download_formats):
         for url in self.urls:
