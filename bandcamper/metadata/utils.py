@@ -34,18 +34,21 @@ def get_track_metadata(file_path):
 def parse_filename(filename):
     match = FILENAME_REGEX.match(filename)
     if match is None:
-        raise ValueError(f"Error parsing filename '{filename}'")
+        return dict()
     return match.groupdict()
 
 
 def get_track_output_context(track_path, tracks):
-
     track_metadata = get_track_metadata(track_path)
     file_path = Path(track_metadata.file.filename)
     filename_data = parse_filename(file_path.name)
-    track_number = track_metadata.track_number or int(filename_data["track_number"])
+    track_number = track_metadata.track_number or int(
+        filename_data.get("track_number", 0)
+    )
     track_title = (
-        tracks.get(track_number) or track_metadata.title or filename_data["title"]
+        tracks.get(track_number)
+        or track_metadata.title
+        or filename_data.get("title", "")
     )
     context = {
         "track": track_title,

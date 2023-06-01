@@ -142,7 +142,7 @@ class Bandcamper:
                 data["album_title"] = from_album_span.text
             return data
 
-    def _free_download(self, url, destination, *download_formats):
+    def _free_download(self, url, destination, item_type, *download_formats):
         response = self.requester.get_request_or_error(url)
         soup = BeautifulSoup(response.content, "lxml")
         download_data = json.loads(soup.find("div", id="pagedata")["data-blob"])
@@ -165,11 +165,12 @@ class Bandcamper:
                 else:
                     self.screamer.error(f"Error downloading {fmt} from {fwd_url}")
                     continue
+                label = f"{fmt}.zip" if item_type == "album" else None
                 file_path = self.requester.download_to_file(
                     download_url,
                     destination,
                     get_random_filename_template(),
-                    f"{fmt}.zip",
+                    label,
                 )
                 if file_path.suffix == ".zip":
                     extract_to_path = file_path.parent / file_path.stem
@@ -284,14 +285,20 @@ class Bandcamper:
             if music_data["item_type"] == "album"
             else music_data.get("album_title", "")
         )
-        year = music_data["current"]["release_date"].split()[2]
+        year = (
+            music_data["current"].get("release_date")
+            or music_data["current"]["publish_date"]
+        ).split()[2]
         title = music_data["current"]["title"]
         downloading_str = f"Downloading {artist} - {title}"
 
         if music_data.get("freeDownloadPage"):
             self.screamer.success(f"Free download found! {downloading_str}")
             file_paths = self._free_download(
-                music_data["freeDownloadPage"], destination, *download_formats
+                music_data["freeDownloadPage"],
+                destination,
+                music_data["item_type"],
+                *download_formats,
             )
         elif music_data["current"].get("require_email"):
             self.screamer.success(f"Email download found! {downloading_str}")
@@ -299,7 +306,7 @@ class Bandcamper:
                 url, music_data["id"], music_data["item_type"]
             )
             file_paths = self._free_download(
-                download_url, destination, *download_formats
+                download_url, destination, music_data["item_type"], *download_formats
             )
         elif self.fallback or download_mp3:
             self.screamer.success(f"MP3-128 download found! {downloading_str}")
