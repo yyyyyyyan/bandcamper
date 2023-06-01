@@ -2,16 +2,16 @@ default_language_version:
   python: python3
 repos:
   - repo: https://github.com/asottile/reorder_python_imports
-    rev: v2.6.0
+    rev: v3.9.0
     hooks:
       - id: reorder-python-imports
         args: [--py37-plus]
   - repo: https://github.com/psf/black
-    rev: 21.9b0
+    rev: 23.3.0
     hooks:
       - id: black
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.4.0
     hooks:
       - id: check-docstring-first
       - id: check-json
@@ -26,8 +26,8 @@ repos:
         args: ["--autofix"]
       - id: requirements-txt-fixer
       - id: trailing-whitespace
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.0.0
     hooks:
       - id: flake8
         args: ["--extend-ignore=E501"]
