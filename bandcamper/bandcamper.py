@@ -1,6 +1,7 @@
 import json
 import re
 from pathlib import Path
+from platform import system as platform_system
 from time import sleep
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -9,6 +10,7 @@ from zipfile import ZipFile
 from bs4 import BeautifulSoup
 from onesecmail import OneSecMail
 from onesecmail.validators import FromAddressValidator
+from pathvalidate import sanitize_filepath
 from requests import HTTPError
 
 from bandcamper.metadata.utils import get_track_output_context
@@ -56,6 +58,10 @@ class Bandcamper:
     ]
 
     BANDCAMP_EMAIL_VALIDATOR = FromAddressValidator(r".+@email\.bandcamp\.com")
+
+    PLATFORMS = {
+        "Darwin": "macOS",
+    }
 
     def __init__(
         self,
@@ -224,13 +230,18 @@ class Bandcamper:
         soup = BeautifulSoup(msgs[0].html_body, "lxml")
         return soup.find("a")["href"]
 
+    def _sanitize_file_path(self, file_path):
+        platform = platform_system()
+        platform = self.PLATFORMS.get(platform, platform)
+        return sanitize_filepath(file_path, platform=platform)
+
     def move_file(self, file_path, destination, output, output_extra, tracks, context):
         if file_path.suffix in suffix_to_metadata:
             context.update(get_track_output_context(file_path, tracks))
         else:
             output = output_extra
             context["filename"] = file_path.name
-        move_to = destination / output.format(**context)
+        move_to = self._sanitize_file_path(destination / output.format(**context))
         move_to.parent.mkdir(parents=True, exist_ok=True)
         file_path.replace(move_to)
         return move_to
