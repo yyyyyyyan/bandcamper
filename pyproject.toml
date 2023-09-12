@@ -1,6 +1,52 @@
-[build-system]
-requires = [
-    "setuptools>=58",
-    "wheel"
+[tool.poetry]
+name = "bandcamper"
+version = "0.0.2"
+description = "Bandcamp downloader."
+authors = ["yyyyyyyan <contact@yyyyyyyan.tech>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/yyyyyyyan/bandcamper"
+repository = "https://github.com/yyyyyyyan/bandcamper"
+keywords = ["bandcamp", "downloader", "music"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Communications :: File Sharing",
+    "Topic :: Internet",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Utilities",
 ]
-build-backend = "setuptools.build_meta"
+
+
+
+[tool.poetry.dependencies]
+python = "^3.7"
+beautifulsoup4 = ">=4.10.0"
+click = ">=8.0.1"
+click-option-group = ">=0.5.3"
+lxml = ">=4.6.3"
+mutagen = ">=1.45.1"
+onesecmail = ">=0.0.1"
+pathvalidate = ">=3.1.0"
+requests = {version = ">=2.26.0", extras = ["socks"]}
+
+[tool.poetry.scripts]
+bandcamper = "bandcamper.__main__:main"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = ">=2.11.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,8 +1,0 @@
-beautifulsoup4>=4.10.0
-click>=8.0.1
-click-option-group>=0.5.3
-lxml>=4.6.3
-mutagen>=1.45.1
-onesecmail>=0.0.1
-pathvalidate>=3.1.0
-requests[socks]>=2.26.0
