@@ -9,7 +9,7 @@ from bandcamper.metadata.vorbis import VorbisMetadata
 from bandcamper.metadata.wave import WAVEMetadata
 
 FILENAME_REGEX = re.compile(
-    r"(?P<artist>.+) - (?P<album>.+) - (?P<track_number>\d{2,}) (?P<title>.+)\.(aiff|flac|m4a|mp3|ogg|wav)",
+    r"(?P<artist>.+) - (?P<album>.+)? - (?P<track_number>\d{2,}) (?P<title>.+)\.(aiff|flac|m4a|mp3|ogg|wav)",
     flags=re.I,
 )
 

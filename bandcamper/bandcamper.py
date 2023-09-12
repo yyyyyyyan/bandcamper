@@ -246,16 +246,18 @@ class Bandcamper:
         file_path.replace(move_to)
         return move_to
 
-    def download_fallback_mp3(self, track_info, artist, album, destination):
+    def download_fallback_mp3(self, track_info, artist, album, title, destination):
         file_paths = []
         for track in track_info:
             if track.get("file"):
-                track_num = f"{track['track_num']:02d}"
+                track_num = f"{track['track_num'] or 0:02d}"
+                if title is None:
+                    title = track["title"]
                 file_paths.append(
                     self.requester.download_to_file(
                         track["file"]["mp3-128"],
                         destination,
-                        f"{artist} - {album} - {track_num} {track['title']}{{ext}}",
+                        f"{artist} - {album} - {track_num} {title}{{ext}}",
                         f"{track_num}.mp3",
                     )
                 )
@@ -291,17 +293,18 @@ class Bandcamper:
             track["track_num"]: track["title"] for track in music_data["trackinfo"]
         }
         artist = music_data["artist"]
-        album = (
-            music_data["current"]["title"]
-            if music_data["item_type"] == "album"
-            else music_data.get("album_title", "")
-        )
+        title = music_data["current"]["title"]
         year = (
             music_data["current"].get("release_date")
             or music_data["current"]["publish_date"]
         ).split()[2]
-        title = music_data["current"]["title"]
+
         downloading_str = f"Downloading {artist} - {title}"
+        if music_data["item_type"] == "album":
+            album = title
+            title = None
+        else:
+            album = music_data.get("album_title", "")
 
         if music_data.get("freeDownloadPage"):
             self.screamer.success(f"Free download found! {downloading_str}")
@@ -322,7 +325,7 @@ class Bandcamper:
         elif self.fallback or download_mp3:
             self.screamer.success(f"MP3-128 download found! {downloading_str}")
             file_paths = self.download_fallback_mp3(
-                music_data["trackinfo"], artist, album, destination
+                music_data["trackinfo"], artist, album, title, destination
             )
             download_mp3 = False
         else:
@@ -333,7 +336,7 @@ class Bandcamper:
         if download_mp3:
             file_paths.extend(
                 self.download_fallback_mp3(
-                    music_data["trackinfo"], artist, album, destination
+                    music_data["trackinfo"], artist, album, title, destination
                 )
             )
 
