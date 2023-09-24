@@ -250,7 +250,12 @@ class Bandcamper:
         file_paths = []
         for track in track_info:
             if track.get("file"):
-                track_num = f"{track['track_num'] or 0:02d}"
+                
+                if track["track_num"] is None:
+                    track_num = 1
+                else:
+                    track_num = f"{track['track_num']:02d}"
+
                 if title is None:
                     title = track["title"]
                 file_paths.append(
