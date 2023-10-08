@@ -70,12 +70,14 @@ class Bandcamper:
         force_https=True,
         screamer=None,
         requester=None,
+        slash_replacement='.',
     ):
         self.urls = set()
         self.fallback = fallback
         self.force_https = force_https
         self.screamer = screamer or Screamer()
         self.requester = requester or Requester()
+        self.slash_replacement = slash_replacement
         for url in urls:
             self.add_url(url)
 
@@ -257,7 +259,7 @@ class Bandcamper:
                     self.requester.download_to_file(
                         track["file"]["mp3-128"],
                         destination,
-                        f"{artist} - {album} - {track_num} {title}{{ext}}",
+                        f"{artist} - {album} - {track_num} {title}{{ext}}".replace("/", self.slash_replacement),
                         f"{track_num}.mp3",
                     )
                 )
@@ -341,9 +343,9 @@ class Bandcamper:
             )
 
         context = {
-            "artist": artist,
-            "album": album,
-            "year": year,
+            "artist": artist.replace('/', self.slash_replacement),
+            "album": album.replace('/', self.slash_replacement),
+            "year": year.replace('/', self.slash_replacement),
         }
         for file_path in file_paths:
             if file_path.is_dir():
