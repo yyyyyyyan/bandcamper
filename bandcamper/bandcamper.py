@@ -140,7 +140,7 @@ class Bandcamper:
                 raise ValueError(f"{url} not found")
             raise exc
         else:
-            soup = BeautifulSoup(response.content, "lxml")
+            soup = BeautifulSoup(response.text, "lxml")
             data = json.loads(
                 soup.find("script", {"data-tralbum": True})["data-tralbum"]
             )
@@ -335,6 +335,8 @@ class Bandcamper:
                 music_data["trackinfo"], artist, album, title, destination
             )
             download_mp3 = False
+        elif not self.fallback:
+            return
         else:
             raise ValueError(
                 f"No free download found for {url}. Try setting fallback to True."
