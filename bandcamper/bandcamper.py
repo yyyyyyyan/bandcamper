@@ -328,6 +328,8 @@ class Bandcamper:
                 music_data["trackinfo"], artist, album, title, destination
             )
             download_mp3 = False
+        elif not self.fallback:
+            return
         else:
             raise ValueError(
                 f"No free download found for {url}. Try setting fallback to True."
