@@ -43,7 +43,7 @@ def get_track_output_context(track_path, tracks):
     file_path = Path(track_metadata.file.filename)
     filename_data = parse_filename(file_path.name)
     track_number = track_metadata.track_number or int(
-        filename_data.get("track_number", 0)
+        filename_data.get("track_number", 1)
     )
     track_title = (
         tracks.get(track_number)
