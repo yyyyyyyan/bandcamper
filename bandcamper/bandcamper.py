@@ -138,7 +138,7 @@ class Bandcamper:
                 raise ValueError(f"{url} not found")
             raise exc
         else:
-            soup = BeautifulSoup(response.content, "lxml")
+            soup = BeautifulSoup(response.text, "lxml")
             data = json.loads(
                 soup.find("script", {"data-tralbum": True})["data-tralbum"]
             )
