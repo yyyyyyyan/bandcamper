@@ -241,6 +241,10 @@ class Bandcamper:
         else:
             output = output_extra
             context["filename"] = file_path.name
+        # create _upper variants for all string values
+        for k, v in dict(context).items():
+            if isinstance(v, str):
+                context[k + "_upper"] = v.upper()
         move_to = self._sanitize_file_path(destination / output.format(**context))
         move_to.parent.mkdir(parents=True, exist_ok=True)
         file_path.replace(move_to)

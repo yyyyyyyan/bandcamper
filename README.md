@@ -85,6 +85,8 @@ The output template is a string that can contain special variables and will be j
 
 This template follows the Python string formatting scheme of `{var}` and is, by default, `"{artist}/{album}/{track_num:02d} - {track}.{ext}"`. You can change the template through the -o/--output flag.
 
+Adding `_upper` to end of the variable name will insert the variable upper-cased.
+
 These are the available variables you can use in the template:
 
 | Variable  | Description                |
