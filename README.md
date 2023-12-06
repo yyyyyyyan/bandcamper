@@ -58,9 +58,6 @@ Options:
     --output-extra TEMPLATE       Output filename template for extra files.
                                   See the 'Extra Output Template' section of
                                   the README for all the info
-    -s, --slash-replacement STRING
-                                  Replace slashes in output filenames with
-                                  this string. Defaults to '.'
   Request Options:
     --random-user-agent           Use random User-Agent for Bandcamp requests
     --http-proxy URL              Proxy to use for HTTP connections
