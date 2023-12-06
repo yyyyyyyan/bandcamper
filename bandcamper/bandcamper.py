@@ -17,6 +17,7 @@ from bandcamper.metadata.utils import get_track_output_context
 from bandcamper.metadata.utils import suffix_to_metadata
 from bandcamper.requests.requester import Requester
 from bandcamper.screamo import Screamer
+from bandcamper.utils import FilenameFormatter
 from bandcamper.utils import get_random_filename_template
 
 
@@ -74,6 +75,7 @@ class Bandcamper:
         self.urls = set()
         self.fallback = fallback
         self.force_https = force_https
+        self.formatter = FilenameFormatter()
         self.screamer = screamer or Screamer()
         self.requester = requester or Requester()
         for url in urls:
@@ -241,11 +243,9 @@ class Bandcamper:
         else:
             output = output_extra
             context["filename"] = file_path.name
-        # create _upper variants for all string values
-        for k, v in dict(context).items():
-            if isinstance(v, str):
-                context[k + "_upper"] = v.upper()
-        move_to = self._sanitize_file_path(destination / output.format(**context))
+        move_to = self._sanitize_file_path(
+            destination / self.formatter.format(output, **context)
+        )
         move_to.parent.mkdir(parents=True, exist_ok=True)
         file_path.replace(move_to)
         return move_to
