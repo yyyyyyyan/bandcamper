@@ -11,6 +11,6 @@ def get_random_filename_template():
 
 def get_extension_from_dir_contents(contents):
     for filepath in contents:
-        m = re.match(MUSIC_FILE_EXTENSIONS, filepath)
+        m = re.match(MUSIC_FILE_EXTENSIONS, str(filepath))
         if m:
             return m.group().split(".")[-1]
