@@ -17,6 +17,7 @@ from bandcamper.metadata.utils import get_track_output_context
 from bandcamper.metadata.utils import suffix_to_metadata
 from bandcamper.requests.requester import Requester
 from bandcamper.screamo import Screamer
+from bandcamper.utils import get_extension_from_dir_contents
 from bandcamper.utils import get_random_filename_template
 
 
@@ -348,9 +349,7 @@ class Bandcamper:
         for file_path in file_paths:
             if file_path.is_dir():
                 dir_contents = list(file_path.iterdir())
-                context["ext"] = get_track_output_context(dir_contents[-1], tracks)[
-                    "ext"
-                ]
+                context["ext"] = get_extension_from_dir_contents(dir_contents)
                 for track_path in dir_contents:
                     new_path = self.move_file(
                         track_path, destination, output, output_extra, tracks, context
