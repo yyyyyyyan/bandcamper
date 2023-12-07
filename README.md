@@ -110,7 +110,7 @@ These are the available variables you can use in the template:
 | artist    | The artist's name          |
 | filename  | The name of the file       |
 | year      | The album's release year   |
-
+| ext       | The album's file extension |
 
 ### Examples
 
