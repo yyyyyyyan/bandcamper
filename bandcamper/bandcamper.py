@@ -347,7 +347,11 @@ class Bandcamper:
         }
         for file_path in file_paths:
             if file_path.is_dir():
-                for track_path in file_path.iterdir():
+                dir_contents = list(file_path.iterdir())
+                context["ext"] = get_track_output_context(dir_contents[-1], tracks)[
+                    "ext"
+                ]
+                for track_path in dir_contents:
                     new_path = self.move_file(
                         track_path, destination, output, output_extra, tracks, context
                     )
