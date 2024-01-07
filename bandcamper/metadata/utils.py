@@ -38,7 +38,7 @@ def parse_filename(filename):
     return match.groupdict()
 
 
-def get_track_output_context(track_path, tracks):
+def get_track_output_context(track_path, tracks, slash_replacement):
     track_metadata = get_track_metadata(track_path)
     file_path = Path(track_metadata.file.filename)
     filename_data = parse_filename(file_path.name)
@@ -51,7 +51,7 @@ def get_track_output_context(track_path, tracks):
         or filename_data.get("title", "")
     )
     context = {
-        "track": track_title,
+        "track": track_title.replace("/", slash_replacement),
         "track_num": track_number,
         "ext": file_path.suffix.split(".")[-1],
     }

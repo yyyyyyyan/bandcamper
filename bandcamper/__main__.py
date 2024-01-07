@@ -77,6 +77,13 @@ def configure(ctx, param, config_path=None):
     default="{artist}/{album}/{filename}",
     help="Output filename template for extra files. See the 'Extra Output Template' section of the README for all the info",
 )
+@optgroup.option(
+    "-s",
+    "--slash-replacement",
+    metavar="STRING",
+    default=".",
+    help="Replace slashes in output filenames with this string. Defaults to '.'",
+)
 @optgroup.group("Request Options")
 @optgroup.option(
     "--random-user-agent",
@@ -138,6 +145,7 @@ def main(
     destination,
     output,
     output_extra,
+    slash_replacement,
     random_user_agent,
     http_proxy,
     https_proxy,
@@ -166,6 +174,7 @@ def main(
         force_https=force_https,
         screamer=screamer,
         requester=requester,
+        slash_replacement=slash_replacement,
     )
     for url in urls:
         try:
