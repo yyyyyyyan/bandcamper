@@ -2,7 +2,7 @@
 name = "bandcamper"
 version = "0.0.2"
 description = "Bandcamp downloader."
-authors = ["yyyyyyyan <contact@yyyyyyyan.tech>"]
+authors = ["y <contact@yyyyyyyan.tech>"]
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/yyyyyyyan/bandcamper"
