@@ -254,7 +254,6 @@ class Bandcamper:
         file_paths = []
         for track in track_info:
             if track.get("file"):
-                
                 if track["track_num"] is None:
                     track_num = 1
                 else:
@@ -315,7 +314,9 @@ class Bandcamper:
         else:
             album = music_data.get("album_title", "")
 
-        if music_data.get("freeDownloadPage"):
+        if music_data.get("freeDownloadPage") and not music_data["current"].get(
+            "minimum_price"
+        ):
             self.screamer.success(f"Free download found! {downloading_str}")
             file_paths = self._free_download(
                 music_data["freeDownloadPage"],
@@ -323,13 +324,18 @@ class Bandcamper:
                 music_data["item_type"],
                 *download_formats,
             )
-        elif music_data["current"].get("require_email"):
+        elif music_data["current"].get("require_email") and not music_data[
+            "current"
+        ].get("minimum_price"):
             self.screamer.success(f"Email download found! {downloading_str}")
             download_url = self._get_download_url_from_email(
                 url, music_data["id"], music_data["item_type"]
             )
             file_paths = self._free_download(
-                download_url, destination, music_data["item_type"], *download_formats
+                download_url,
+                destination,
+                music_data["item_type"],
+                *download_formats,
             )
         elif self.fallback or download_mp3:
             self.screamer.success(f"MP3-128 download found! {downloading_str}")
