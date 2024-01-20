@@ -298,11 +298,8 @@ class Bandcamper:
             self.screamer.error(f"Failed to get music data from {url}")
             return
 
-        tracks = {
-            track["track_num"]: track["title"] for track in music_data["trackinfo"]
-        }
         artist = music_data["artist"]
-        title = music_data["current"]["title"]
+        title = album = music_data["current"]["title"]
         year = (
             music_data["current"].get("release_date")
             or music_data["current"]["publish_date"]
@@ -310,10 +307,18 @@ class Bandcamper:
 
         downloading_str = f"Downloading {artist} - {title}"
         if music_data["item_type"] == "album":
-            album = title
             title = None
+        elif music_data["item_type"] == "track":
+            # set track num as it is None for single tracks
+            music_data["trackinfo"][0]["track_num"] = 1
         else:
-            album = music_data.get("album_title", "")
+            raise NotImplementedError(
+                "Release is of an unknown type (only albums and tracks are supported)."
+            )
+
+        tracks = {
+            track["track_num"]: track["title"] for track in music_data["trackinfo"]
+        }
 
         if music_data.get("freeDownloadPage"):
             self.screamer.success(f"Free download found! {downloading_str}")
